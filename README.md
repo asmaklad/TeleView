@@ -28,7 +28,8 @@ User Guide:
 *    Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 
 Before uploading chose the target ESP32-CAM Board :
-''''Cpp
+
+'''CPP
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
 //#define CAMERA_MODEL_ESP_EYE
@@ -36,7 +37,7 @@ Before uploading chose the target ESP32-CAM Board :
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
 #define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "TTGO T1" 
-''''
+'''
 
 The "camera_pins.h" has the speces of each board pins and also things like supported features such as OLED , Flash ..etc
 This code has been tested on CAMERA_MODEL_AI_THINKER and CAMERA_MODEL_TTGO_T1_CAMERA modules.

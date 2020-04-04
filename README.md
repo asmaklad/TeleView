@@ -1,8 +1,8 @@
 # TeleView:
 	* A telegram-bot to control an ESP-Camera enabled board with many features
 
-# Main Faetures: 
-## Send Photo through telegram upon request.
+## Main Faetures: 
+* Send Photo through telegram upon request.
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options such as Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse send photo which are standard features
 * control options such as Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector specific features per some ESP-CAM Boards when available.
@@ -16,10 +16,10 @@
 
 
 
-*Required Installation:*
+##Required Installation:
 	* ESP32 for Arduino IDE https://dl.espressif.com/dl/package_esp32_index.json
 
-*Required Libraries to compile:*
+##Required Libraries to compile:
 	* AutoConnect
 	* ArduinoJson - V5.13.5
 	* Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc

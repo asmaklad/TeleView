@@ -27,7 +27,7 @@ User Guide:
 *    ArduinoJson - V5.13.5
 *    Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 
-Before uploading chose the target ESP32-CAM Board :
+Before uploading, chose the target ESP32-CAM Board :
 
 ```CPP
 // Select camera model
@@ -39,8 +39,8 @@ Before uploading chose the target ESP32-CAM Board :
 #define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "TTGO T1" 
 ```
 
-The "camera_pins.h" has the speces of each board pins and also things like supported features such as OLED , Flash ..etc
-This code has been tested on CAMERA_MODEL_AI_THINKER and CAMERA_MODEL_TTGO_T1_CAMERA modules.
+The "camera_pins.h" has the speces of each board pins and also supported features such as OLED , Flash ..etc
+This code has been tested on CAMERA_MODEL_AI_THINKER and CAMERA_MODEL_TTGO_T1_CAMERA modules. please update the camera_pins.h for other boards and more features.
 
 For the CAMERA_MODEL_TTGO_T1_CAMERA borad, please chose the "TTGO T1" and and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 
@@ -50,5 +50,22 @@ When the sketch starts, it looks for a familiar WiFi. If it can't fid one, it wi
 First Time- SSID will be "TeleView" with the password "tv-ei-694"
 
 The AutoConnect library will start a portal wiht the bage /config to configure the Wifi and other configuration parameters.
+
+After a scucessfull Wifi connection, the same portal interface will be exposed to the local Wifi. The borad couled be reached on the LAN through the address "{{The Device Name}}.local"
+
+The default Device Name is Teleview and the address would be:
+http://TeleView.local/  : A general Info page
+http://TeleView.local/_ac : The Configuration Portal for AutoConnect
+http://TeleView.local/config : The Configuration Portal for The Bot
+http://TeleView.local/capture : a capture of the camera JPEG
+
+## Setting up the Telegrambot:
+A Telegram-bot-token is required to use the Telegrambot feature. 
+Follow these instructions to get a Bot Token.
+https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-telegram?view=azure-bot-service-4.0
+
+You will also need to find out your UserId or in Telegram it is refered as ChatID.
+This can be acquired through a visit to the @chatid_echo_bot Telegrambot https://web.telegram.org/#/im?p=@chatid_echo_bot 
+
 
 

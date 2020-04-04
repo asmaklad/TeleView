@@ -46,18 +46,18 @@ For the CAMERA_MODEL_TTGO_T1_CAMERA borad, please chose the "TTGO T1" and and se
 
 ## Setting up the WiFi:
 This sektch uses the Autoconnect Arduino library (https://github.com/Hieromon/AutoConnect) to let the user configure WiFi SSID and Password.
-When the sketch starts, it looks for a familiar WiFi. If it can't fid one, it will starts its own Access Point when the owner can connect. 
+When the sketch starts, it looks for a familiar WiFi. If it can't find one, it will start its own Access Point where the owner can connect and configure the WIFI. 
 First Time- SSID will be "TeleView" with the password "tv-ei-694"
 
-The AutoConnect library will start a portal wiht the bage /config to configure the Wifi and other configuration parameters.
+The AutoConnect library will start a portal wiht the page /config to configure the Wifi and other configuration parameters.
 
 After a scucessfull Wifi connection, the same portal interface will be exposed to the local Wifi. The borad couled be reached on the LAN through the address "{{The Device Name}}.local"
 
 The default Device Name is Teleview and the address would be:
-http://TeleView.local/  : A general Info page
-http://TeleView.local/_ac : The Configuration Portal for AutoConnect
-http://TeleView.local/config : The Configuration Portal for The Bot
-http://TeleView.local/capture : a capture of the camera JPEG
+* http://TeleView.local/  : A general Info page
+* http://TeleView.local/_ac : The Configuration Portal for AutoConnect
+* http://TeleView.local/config : The Configuration Portal for The Bot
+* http://TeleView.local/capture : a capture of the camera JPEG
 
 ## Setting up the Telegrambot:
 A Telegram-bot-token is required to use the Telegrambot feature. 
@@ -65,7 +65,7 @@ Follow these instructions to get a Bot Token.
 https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-telegram?view=azure-bot-service-4.0
 
 You will also need to find out your UserId or in Telegram it is refered as ChatID.
-This can be acquired through a visit to the @chatid_echo_bot Telegrambot https://web.telegram.org/#/im?p=@chatid_echo_bot 
+This could be acquired through a visit to the @chatid_echo_bot Telegrambot https://web.telegram.org/#/im?p=@chatid_echo_bot 
 
 
 

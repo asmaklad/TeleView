@@ -29,7 +29,7 @@ User Guide:
 
 Before uploading chose the target ESP32-CAM Board :
 
-'''CPP
+'''
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
 //#define CAMERA_MODEL_ESP_EYE

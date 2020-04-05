@@ -73,8 +73,19 @@ Before uploading, chose the target ESP32-CAM Board :
 
 The "camera_pins.h" has the speces of each board pins and also supported features such as OLED , Flash ..etc
 This code has been tested on CAMERA_MODEL_AI_THINKER and CAMERA_MODEL_TTGO_T1_CAMERA modules. please update the camera_pins.h for other boards and more features.
-
 For the CAMERA_MODEL_TTGO_T1_CAMERA borad, please chose the "TTGO T1" and and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
+
+For example: in "camera_pins.h" inside the section "#elif defined(CAMERA_MODEL_TTGO_T1_CAMERA)", you will find these precompilers:
+#define SDA_PIN 21
+#define SCL_PIN 22
+
+#define I2C_DISPLAY_ADDR  0x3c
+#define USE_OLED_AS_FLASH 1 // the OLED is on the same side as the camera
+#define PIR_PIN           33 //GPIO_INPUT_IO_33 AS312
+
+#define BUTTON_PIN        34
+
+These precompiler defines, are used upon compilation to utilize or ommit parts of the code depending on the features of the board.
 
 ### Setting up the WiFi:
 This sektch uses the Autoconnect Arduino library (https://github.com/Hieromon/AutoConnect) to let the user configure WiFi SSID and Password.
@@ -109,7 +120,7 @@ Reset your board and you should get an "I am Alive!" messgae from your bot.
 Most of the buttons in the telegram Keyboard are on/off options. 
 
 * /start		: 	Press this on the first time you use the bot , it will show some helpful info.
-* /options  	: 	will show the current status of the differnt options and flags.
+* /options  	: 	Will show the current status of the differnt options and flags.
 * /sendPhoto	: 	Sends a photo to the requester.
 * /vFlip		:	Flips the camera-image upside down.
 * /hmirror  	:	Mirror the camera-image . (unfortunately; there is no 90 degrees rotate )
@@ -154,8 +165,8 @@ The Autoconnect portal configures the WiFi access and has a link to the bot's co
 
 ### Buttons:
 * OK 					:	Submit and Save the configuration.
-* Delete Everything	: 	Deletes all configuration data. except Wifi credentials.
-* Cancel				: 	Go back to AutoConnect Portal with saving.
+* Delete Everything		: 	Deletes all configuration data. except Wifi credentials.
+* Cancel				: 	Go back to AutoConnect Portal without saving.
 
 
 

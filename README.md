@@ -76,14 +76,14 @@ This code has been tested on CAMERA_MODEL_AI_THINKER and CAMERA_MODEL_TTGO_T1_CA
 For the CAMERA_MODEL_TTGO_T1_CAMERA borad, please chose the "TTGO T1" and and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 
 For example: in "camera_pins.h" inside the section "#elif defined(CAMERA_MODEL_TTGO_T1_CAMERA)", you will find these precompilers:
-#define SDA_PIN 21
-#define SCL_PIN 22
-
-#define I2C_DISPLAY_ADDR  0x3c
-#define USE_OLED_AS_FLASH 1 // the OLED is on the same side as the camera
-#define PIR_PIN           33 //GPIO_INPUT_IO_33 AS312
-
-#define BUTTON_PIN        34
+* #define SDA_PIN 21
+* #define SCL_PIN 22
+ 
+* #define I2C_DISPLAY_ADDR  0x3c
+* #define USE_OLED_AS_FLASH 1 // the OLED is on the same side as the camera
+* #define PIR_PIN           33 //GPIO_INPUT_IO_33 AS312
+ 
+* #define BUTTON_PIN        34
 
 These precompiler defines, are used upon compilation to utilize or ommit parts of the code depending on the features of the board.
 

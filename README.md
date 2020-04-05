@@ -19,13 +19,13 @@
 * Send Photo through telegram upon request.
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options with Telegram :
-	** Generic features: Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse and send photo.
-	** Board Specific Features: Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector.
+	* Generic features: Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse and send photo.
+	* Board Specific Features: Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector.
 * Telegram Keyboard.
 * AutoConnect / WiFi config feature (no hard coding of the WiFI SSID,Pass )
 * Web Portal :
-	** to configure the control options and WiFi AP.
-    ** configure Telegram-BOT-Token, AdminID of the BOT
+	* to configure the control options and WiFi AP.
+    * configure Telegram-BOT-Token, AdminID of the BOT
 * Web Server for /capture.jpg to make photo available through web. (configurable through Telegram menue)
 * The Device-Name (configurable) decides the hostname of the device on LAN/WiFi 
 * Time Lapse feature every X min, chose 0 to disable Time-Lapse.

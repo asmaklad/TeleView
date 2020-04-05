@@ -3,7 +3,7 @@
 
 ## Main Faetures: 
 * Send Photo through telegram upon request.
-![alt text](./docs/photo_sendOptions.jpg "Telegram /sendPhoto")
+![alt text](./docs/photo_sendOptions.jpg =400x "Telegram /sendPhoto")
 
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options such as Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse send photo which are standard features

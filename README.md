@@ -1,10 +1,19 @@
 # TeleView:
 	* A telegram-bot to control an ESP-Camera enabled board with many features
 
-## Main Faetures: 
+## Main Features and snapshots
 * Send Photo through telegram upon request.
-![alt text](./docs/photo_sendOptions.jpg =400x "Telegram /sendPhoto")
+![alt text](./docs/Photo_sendPhoto.jpg  "Telegram /sendPhoto")
 
+* Control camera options through Telegram Keyboard
+<img src="./docs/photo_telegram_menu.jpg" alt="drawing" width="50%"/>
+
+* View options through Telegram 
+<img src="./docs/photo_sendOptions.jpg" alt="drawing" width="400"/>
+
+
+## Faetures: 
+* Send Photo through telegram upon request.
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options such as Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse send photo which are standard features
 * control options such as Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector specific features per some ESP-CAM Boards when available.

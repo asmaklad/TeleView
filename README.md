@@ -3,7 +3,7 @@
 
 ## Main Features and snapshots
 * Send Photo through telegram upon request.
-<img src="./docs/photo_sendOptions.jpg" alt="/sendPhoto" width="40%"/>
+<img src="./docs/Photo_sendPhoto.jpg" alt="/sendPhoto" width="40%"/>
 
 * Control camera options through Telegram Keyboard
 <img src="./docs/photo_telegram_menu.jpg" alt="/options" width="40%"/>

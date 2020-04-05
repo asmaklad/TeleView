@@ -3,6 +3,8 @@
 
 ## Main Faetures: 
 * Send Photo through telegram upon request.
+![alt text](./docs/photo_sendOptions.jpg "Telegram /sendPhoto")
+
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options such as Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse send photo which are standard features
 * control options such as Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector specific features per some ESP-CAM Boards when available.
@@ -13,7 +15,7 @@
 * The Device-Name (configurable) decides the hostname of the device on LAN/WiFi 
 
 ## Required Installation:
-* ESP32 for Arduino IDE https://dl.espressif.com/dl/package_esp32_index.json
+* ESP32 for Arduino IDE https://github.com/espressif/arduino-esp32
 
 ## Required Libraries to compile:
 * AutoConnect

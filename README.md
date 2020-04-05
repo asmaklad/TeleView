@@ -52,7 +52,7 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 * ArduinoJson - V5.13.5
 * Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 
-##User Guide:
+## User Guide:
 ### Compile and Upload 
  This project is Compiled and uploaded through ArduinoIDE, use the normal procedure for installing ESP32 in ArduinoIDE and install the following Libs:
 *    AutoConnect
@@ -88,16 +88,74 @@ After a scucessfull Wifi connection, the same portal interface will be exposed t
 The default Device Name is Teleview and the address would be:
 * http://TeleView.local/  : A general Info page
 * http://TeleView.local/_ac : The Configuration Portal for AutoConnect
-* http://TeleView.local/config : The Configuration Portal for The Bot
+* http://TeleView.local/teleView : The Configuration Portal for The Bot
 * http://TeleView.local/capture : a capture of the camera JPEG
 
 ### Setting up the Telegrambot:
 A Telegram-bot-token is required to use the Telegrambot feature. 
-Follow these instructions to get a Bot Token.
+You may follow these instructions to get a Telegram Bot Token through the @botFather.
 https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-telegram?view=azure-bot-service-4.0
 
 You will also need to find out your UserId or in Telegram it is refered as ChatID.
 This could be acquired through a visit to the @chatid_echo_bot Telegrambot https://web.telegram.org/#/im?p=@chatid_echo_bot 
+
+Insert the token and the ChatID of the Admin in the web-interface found at the url "http://<youDeviceAddress>/teleView" and save.
+
+Add the Bot to your telegram contacts.
+
+Reset your board and you should get an "I am Alive!" messgae from your bot.
+
+## The Telegram Keyboard
+Most of the buttons in the telegram Keyboard are on/off options. 
+
+* /start		: 	Press this on the first time you use the bot , it will show some helpful info.
+* /options  	: 	will show the current status of the differnt options and flags.
+* /sendPhoto	: 	Sends a photo to the requester.
+* /vFlip		:	Flips the camera-image upside down.
+* /hmirror  	:	Mirror the camera-image . (unfortunately; there is no 90 degrees rotate )
+* /setLapse 	: 	It will ask to insert the lapse time in minutes. insert 0 to disbale, 60 for every 1 Hour, 1440 for once a day ...etc
+* /webCaptueon	:	This will disbale/enable the ./capture and ./capture.jpg urls.
+
+Will only be shown in TTGO_T1
+* /screenOn		:	Use the screen to display useful information or switch it off.
+* /screenFlip	:	Flips the screen upside down.
+* /motDetectOn	:	Will enable/disable motion detection feature.
+
+Will only be shown when an OLED or Flash led available:
+* /useFlash		:	will enable/disbale using the flash upon a camera snashot.
+
+## The Configuration Web interface
+
+### http://TeleView.local/ 
+This root home page displays a preview of the camera and some basis info. The cog-wheel icon is a link to the AutoConnect portal.
+
+### http://TeleView.local/_ac 
+The Autoconnect portal configures the WiFi access and has a link to the bot's configuration page "./teleView". It has the following elements:
+* Intput Text
+** Device Name			:	The name of teh device , this will be used as a DNS entry in the local LAN and identifying the device.
+** Lapse Time-min		:	Every X min , the board will send a photo to the admin. set this to 0 to disbale time-lapsing feature.
+** Telegram Bot Token	:	This is the token you get from the BotFather.
+** Admin Chat ID		:	Telegrams commands will only be processed if the Chat_id of the incomming Message is the same as this Admin_id ( a Security feature ).
+** User Chat ID			:	Currently unused feature. you may leave it empty.
+
+* CheckBoxes:
+** Use Falsh when snapping a photo	: 	Enable/Disable using the flash when capturing a photo.
+** Horizontal Mirror				:	Horizontal Mirror effect on the Captured image (left-right).
+** Vertical Flip					:	Upside down effect on the Captured image.
+
+** Screen Flip						:	Upside down of the OLED display.
+** OLED Display is On				:	Enable/Disable The OLED display.
+** Motion Detection Enabled			:	Enable/Disable the Motion Detection Feature.
+
+* ComboBoxes:
+** Select TZ name 		:	Select the Time Zone region (currently unused)
+** Select Resolution 	:	Select the Camera Resolution. (never use the QXGA)
+
+* Buttons:
+** OK 					:	Submit and Save the configuration.
+** Delete Everything	: 	Deletes all configuration data. except Wifi credentials.
+** Cancel				: 	Go back to AutoConnect Portal with saving.
+
 
 
 

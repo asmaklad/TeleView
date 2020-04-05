@@ -131,30 +131,31 @@ This root home page displays a preview of the camera and some basis info. The co
 
 ### http://TeleView.local/_ac 
 The Autoconnect portal configures the WiFi access and has a link to the bot's configuration page "./teleView". It has the following elements:
-* Intput Text
-** Device Name			:	The name of teh device , this will be used as a DNS entry in the local LAN and identifying the device.
-** Lapse Time-min		:	Every X min , the board will send a photo to the admin. set this to 0 to disbale time-lapsing feature.
-** Telegram Bot Token	:	This is the token you get from the BotFather.
-** Admin Chat ID		:	Telegrams commands will only be processed if the Chat_id of the incomming Message is the same as this Admin_id ( a Security feature ).
-** User Chat ID			:	Currently unused feature. you may leave it empty.
 
-* CheckBoxes:
-** Use Falsh when snapping a photo	: 	Enable/Disable using the flash when capturing a photo.
-** Horizontal Mirror				:	Horizontal Mirror effect on the Captured image (left-right).
-** Vertical Flip					:	Upside down effect on the Captured image.
+### Intput Text
+* Device Name			:	The name of teh device , this will be used as a DNS entry in the local LAN and identifying the device.
+* Lapse Time-min		:	Every X min , the board will send a photo to the admin. set this to 0 to disbale time-lapsing feature.
+* Telegram Bot Token	:	This is the token you get from the BotFather.
+* Admin Chat ID		:	Telegrams commands will only be processed if the Chat_id of the incomming Message is the same as this Admin_id ( a Security feature ).
+* User Chat ID			:	Currently unused feature. you may leave it empty.
 
-** Screen Flip						:	Upside down of the OLED display.
-** OLED Display is On				:	Enable/Disable The OLED display.
-** Motion Detection Enabled			:	Enable/Disable the Motion Detection Feature.
+### CheckBoxes:
+* Use Falsh when snapping a photo	: 	Enable/Disable using the flash when capturing a photo.
+* Horizontal Mirror				:	Horizontal Mirror effect on the Captured image (left-right).
+* Vertical Flip					:	Upside down effect on the Captured image.
 
-* ComboBoxes:
-** Select TZ name 		:	Select the Time Zone region (currently unused)
-** Select Resolution 	:	Select the Camera Resolution. (never use the QXGA)
+* Screen Flip						:	Upside down of the OLED display.
+* OLED Display is On				:	Enable/Disable The OLED display.
+* Motion Detection Enabled			:	Enable/Disable the Motion Detection Feature.
 
-* Buttons:
-** OK 					:	Submit and Save the configuration.
-** Delete Everything	: 	Deletes all configuration data. except Wifi credentials.
-** Cancel				: 	Go back to AutoConnect Portal with saving.
+### ComboBoxes:
+* Select TZ name 		:	Select the Time Zone region (currently unused)
+* Select Resolution 	:	Select the Camera Resolution. (never use the QXGA)
+
+### Buttons:
+* OK 					:	Submit and Save the configuration.
+* Delete Everything	: 	Deletes all configuration data. except Wifi credentials.
+* Cancel				: 	Go back to AutoConnect Portal with saving.
 
 
 

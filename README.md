@@ -3,36 +3,57 @@
 
 ## Main Features and snapshots
 * Send Photo through telegram upon request.
-![alt text](./docs/Photo_sendPhoto.jpg  "Telegram /sendPhoto")
+<img src="./docs/photo_sendOptions.jpg" alt="/sendPhoto" width="40%"/>
 
 * Control camera options through Telegram Keyboard
-<img src="./docs/photo_telegram_menu.jpg" alt="drawing" width="50%"/>
+<img src="./docs/photo_telegram_menu.jpg" alt="/options" width="40%"/>
 
 * View options through Telegram 
-<img src="./docs/photo_sendOptions.jpg" alt="drawing" width="400"/>
+<img src="./docs/photo_sendOptions.jpg" alt="/options" width="40%"/>
+
+* Web interface
+<img src="./docs/photo_web_interface.png" alt="Web Interface" width="40%"/>
 
 
-## Faetures: 
+## Generic Faetures: 
 * Send Photo through telegram upon request.
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
-* Control options such as Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse send photo which are standard features
-* control options such as Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector specific features per some ESP-CAM Boards when available.
+* Control options with Telegram :
+	** Generic features: Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse and send photo.
+	** Board Specific Features: Flash ,OLED display enable, OLED as Flash, Screen Flip,Motion Detector.
+* Telegram Keyboard.
 * AutoConnect / WiFi config feature (no hard coding of the WiFI SSID,Pass )
-* Web Portal to configure the control options and WiFi AP.
-* Web Portal to configure Telegram-BOT-Token, AdminID of the BOT
-* Web Server for /capture.jpg to make photo available through web. 
+* Web Portal :
+	** to configure the control options and WiFi AP.
+    ** configure Telegram-BOT-Token, AdminID of the BOT
+* Web Server for /capture.jpg to make photo available through web. (configurable through Telegram menue)
 * The Device-Name (configurable) decides the hostname of the device on LAN/WiFi 
+* Time Lapse feature every X min, chose 0 to disable Time-Lapse.
+
+## Specific Features per Type of Board:
+* /useFlash : For the AI_Thinker board, there is a very strong led on the same side as camera, which could be used as a flash. 
+This feature Will only be compiled in the sketch if the "#define CAMERA_MODEL_AI_THINKER"  is chosen upon compile.
+
+* /motDetectOn : For the TTGO_TI board, there is a motion sensor , which could trigger a "sendPhoto". This will only be available when the sketch is compiled with "#define CAMERA_MODEL_TTGO_T1_CAMERA".
+
+* /screenOn : For the TTGO_TI board, there is a SSD1306 OLED display, which could display AutoConnect - AP , IP when connected and used as a weak-flash when taking a photo.
+This will only be available when the sketch is compiled with "#define CAMERA_MODEL_TTGO_T1_CAMERA". also you could flip the screen upside-down.
+
+# Tested Boards:
+* AI-Thinker ESP32-CAM Board
+* TTGO T1 Board
 
 ## Required Installation:
+* Arduino IDE
 * ESP32 for Arduino IDE https://github.com/espressif/arduino-esp32
 
-## Required Libraries to compile:
+## Required Libraries:
 * AutoConnect
 * ArduinoJson - V5.13.5
 * Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 
-User Guide:
-## Compile and Upload 
+##User Guide:
+### Compile and Upload 
  This project is Compiled and uploaded through ArduinoIDE, use the normal procedure for installing ESP32 in ArduinoIDE and install the following Libs:
 *    AutoConnect
 *    ArduinoJson - V5.13.5
@@ -55,7 +76,7 @@ This code has been tested on CAMERA_MODEL_AI_THINKER and CAMERA_MODEL_TTGO_T1_CA
 
 For the CAMERA_MODEL_TTGO_T1_CAMERA borad, please chose the "TTGO T1" and and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 
-## Setting up the WiFi:
+### Setting up the WiFi:
 This sektch uses the Autoconnect Arduino library (https://github.com/Hieromon/AutoConnect) to let the user configure WiFi SSID and Password.
 When the sketch starts, it looks for a familiar WiFi. If it can't find one, it will start its own Access Point where the owner can connect and configure the WIFI. 
 First Time- SSID will be "TeleView" with the password "tv-ei-694"
@@ -70,7 +91,7 @@ The default Device Name is Teleview and the address would be:
 * http://TeleView.local/config : The Configuration Portal for The Bot
 * http://TeleView.local/capture : a capture of the camera JPEG
 
-## Setting up the Telegrambot:
+### Setting up the Telegrambot:
 A Telegram-bot-token is required to use the Telegrambot feature. 
 Follow these instructions to get a Bot Token.
 https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-telegram?view=azure-bot-service-4.0

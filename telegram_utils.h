@@ -7,6 +7,7 @@
 
 ////////////////////////////////////////////////
 WiFiClientSecure botClient;
+//botClient.setInsecure();
 UniversalTelegramBot bot(botClient);
 camera_fb_t * fb;
 size_t currentByte;

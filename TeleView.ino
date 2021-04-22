@@ -227,7 +227,7 @@ void setup() {
 #endif
 
 #if defined(PIR_PIN)
-  pinMode(PIR_PIN, INPUT);
+  pinMode(PIR_PIN, INPUT_PULLDOWN);
 #endif
   bTelegramBotInitiated=true;
 }

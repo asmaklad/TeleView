@@ -51,6 +51,12 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 * AutoConnect
 * ArduinoJson - V5.13.5
 * Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
+* Some known issues are sovled by downgrading somme of the libraries:
+Problem  Description |   Solution
+----------------------- |  -----------
+Unable to connect to Telegram |  downgrade ESP32 library to version 1.0.4
+SSID credentials not saved | downgrade Arduino JSON to ArduinoJson 1.0.6 
+
 
 ## User Guide:
 ### Compile and Upload 

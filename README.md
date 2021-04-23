@@ -52,6 +52,7 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 * ArduinoJson - V5.13.5
 * Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 * Some known issues are sovled by downgrading somme of the libraries:
+
 Problem  Description |   Solution
 ----------------------- |  -----------
 Unable to connect to Telegram |  downgrade ESP32 library to version 1.0.4

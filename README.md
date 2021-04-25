@@ -66,8 +66,9 @@ AutoConnect | 1.2.2
 ### Compile and Upload 
  This project is Compiled and uploaded through ArduinoIDE, use the normal procedure for installing ESP32 in ArduinoIDE and install the following Libs:
 *    AutoConnect
-*    ArduinoJson - V5.13.5
+*    ArduinoJson 
 *    Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
+*    please check the required libraries section above.
 
 Before uploading, chose the target ESP32-CAM Board :
 

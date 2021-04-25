@@ -168,7 +168,8 @@ void setup() {
   acConfig.psk  = "tv-ei-694";
   acConfig.hostName=configItems.deviceName;  
   acConfig.autoRise=true;
-  //acConfig.autoSave=AUTOCONNECT_USE_PREFERENCES;
+  //AUTOCONNECT_USE_PREFERENCES
+  acConfig.autoSave=AC_SAVECREDENTIAL_AUTO;
   //acConfig.portalTimeout = 60000;  // It will time out in 60 seconds
   #define AC_DEBUG 1
   Portal.config(acConfig);

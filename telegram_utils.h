@@ -1,19 +1,20 @@
 #ifndef TELEGRAM_UTILS_H
 #define TELEGRAM_UTILS_H
 
+#define TELEGRAM_DEBUG 1
 #include "esp_camera.h"
 #include "persist.h"
 #include "webPages.h"
 
 ////////////////////////////////////////////////
 WiFiClientSecure botClient;
-//botClient.setInsecure();
-UniversalTelegramBot bot(botClient);
-camera_fb_t * fb;
+UniversalTelegramBot bot("",botClient);
+camera_fb_t *fb = NULL;
 size_t currentByte;
 
 boolean bCameraInitiated=false;
 boolean bTelegramBotInitiated=false;
+
 
 ////////////////////////////////////////////////
 int Bot_mtbs = 1000; //mean time between scan messages
@@ -23,12 +24,22 @@ String keyboardJson = "" ;
 boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
-String sendCapturedImage2Telegram(String chat_id);
+//String sendCapturedImage2Telegram(String chat_id);
+String sendCapturedImage2Telegram2(String chat_id);
 void handleNewMessages(int numNewMessages);
-bool isMoreDataAvailable();
-uint8_t photoNextByte();
 String formulateKeyboardJson();
+
+bool isMoreDataAvailable();
+byte *getNextBuffer();
+int getNextBufferLen();
+bool dataAvailable = false;
+//uint8_t photoNextByte();
 ////////////////////////////////////////////////
+int Counter_isMoreDataAvailable=0;
+int Counter_getNextBuffer=0;
+int Counter_getNextBufferLen=0;
+
+///////////////////////////////////////////////
 String formulateKeyboardJson(){
   String lkeyboardJson = "[";
   lkeyboardJson += "[\"/start\", \"/options\"]";
@@ -60,9 +71,13 @@ String formulateKeyboardJson(){
   return(lkeyboardJson);
 }
 
-String sendCapturedImage2Telegram(String chat_id) {  
-  Serial.println("sendChatAction#1");
-  bot.sendChatAction(chat_id, "upload_photo");  
+
+String sendCapturedImage2Telegram2(String chat_id) {
+  const char* myDomain = "api.telegram.org";
+  String getAll="", getBody = "";
+
+  camera_fb_t * fb = NULL;
+  
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
     Serial.println("Switching Flash-lamp ON");
@@ -80,24 +95,95 @@ String sendCapturedImage2Telegram(String chat_id) {
     Serial.println("Flash-OLED is ON");
   }  
 #endif
-
+  
   Serial.println("Capture Photo");
-  fb = esp_camera_fb_get();
-  timeOfLastPhoto=time(NULL);
-  Serial.printf("len: %d, width: %d, height: %d\n",fb->len,fb->width,fb->height);
-  if (!fb) {
-      Serial.println("Camera Capture Failed");
-      bot.sendMessage(chat_id, "Camera Capture Failed", "");
-      return "FAIL";
+  fb = esp_camera_fb_get();  
+  if(!fb) {
+    Serial.println("Camera capture failed");
+    delay(1000);
+    ESP.restart();
   }  
-  currentByte = 0;  
-  int fblen= (int) fb->len;  
-  Serial.printf("fb size %d \n",fblen);
-  bot.sendChatAction(chat_id, "upload_document");
-  String sent = bot.sendPhotoByBinary(chat_id, "image/jpeg", fblen, isMoreDataAvailable, photoNextByte);  
-  Serial.println("PhotoSent:"+sent);
-  PICTURES_COUNT++;
+
+  Serial.println("sendChatAction#1");
+  bot.sendChatAction(chat_id, "upload_photo");  
+  // reset the client connection 
+  if (botClient.connected()) {
+    #ifdef TELEGRAM_DEBUG  
+        Serial.println(F("Closing client"));
+    #endif
+    botClient.stop();
+  }
+  // Connect with api.telegram.org if not already connected
+  if (!botClient.connected()) {
+    #ifdef TELEGRAM_DEBUG  
+        Serial.println(F("[BOT Client]Connecting to server"));
+    #endif
+    if (!botClient.connect(TELEGRAM_HOST, TELEGRAM_SSL_PORT)) {
+      #ifdef TELEGRAM_DEBUG  
+        Serial.println(F("[BOT Client]Conection error"));
+      #endif
+    }
+  }
+  
+  String head = "--Taiwan\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id + "\r\n--Taiwan\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+  String tail = "\r\n--Taiwan--\r\n";
+
+  uint16_t imageLen = fb->len;
+  uint16_t extraLen = head.length() + tail.length();
+  uint16_t totalLen = imageLen + extraLen;
+
+  botClient.println("POST /bot"+configItems.botTTelegram+"/sendPhoto HTTP/1.1");
+  botClient.println("Host: " + String(myDomain));
+  botClient.println("Content-Length: " + String(totalLen));
+  botClient.println("Content-Type: multipart/form-data; boundary=Taiwan");
+  botClient.println("Connection: keep-alive");
+  botClient.println();
+  botClient.print(head);
+
+  uint8_t *fbBuf = fb->buf;
+  size_t fbLen = fb->len;
+  for (size_t n=0;n<fbLen;n=n+1024) {
+    if (n+1024<fbLen) {
+      botClient.write(fbBuf, 1024);
+      fbBuf += 1024;
+    }
+    else if (fbLen%1024>0) {
+      size_t remainder = fbLen%1024;
+      botClient.write(fbBuf, remainder);
+    }
+  }  
+  
+  botClient.print(tail);
+  
   esp_camera_fb_return(fb);
+  
+  int waitTime = 10000;   // timeout 10 seconds
+  long startTime = millis();
+  boolean state = false;
+  
+  while ((startTime + waitTime) > millis())
+  {
+    Serial.print(".");
+    delay(100);      
+    while (botClient.available()) 
+    {
+        char c = botClient.read();
+        if (state==true) getBody += String(c);      
+        if (c == '\n') 
+        {
+          if (getAll.length()==0) state=true; 
+          getAll = "";
+        } 
+        else if (c != '\r')
+          getAll += String(c);
+        startTime = millis();
+     }
+     if (getBody.length()>0) break;
+  }
+  Serial.println(getBody);
+  Serial.println();
+  PICTURES_COUNT++; 
+  botClient.stop();
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
     delay(10);
@@ -112,16 +198,8 @@ String sendCapturedImage2Telegram(String chat_id) {
   bot.sendMessage(chat_id, "Photo sent","" );
   return("success");
 }
-////////////////////////////////////
-bool isMoreDataAvailable() {
-  int res=(fb->len) - currentByte;  
-  return ( res );
-}
-////////////////////////////////////
-uint8_t photoNextByte() {
-  currentByte++;  
-  return (fb->buf[currentByte - 1]);
-}
+
+
 ////////////////////////////////////
 void handleNewMessages(int numNewMessages) {
   Serial.println("handleNewMessages:BEGIN");
@@ -140,14 +218,14 @@ void handleNewMessages(int numNewMessages) {
       if (bSetLapseMode) {
         bSetLapseMode=false;
         configItems.lapseTime=(int) text.toInt();
-      }
+      }      
       if (text == "/sendPhoto") {
         Serial.println("handleNewMessages/sendPhoto:BEGIN");
         if(bot.messages[i].type == "channel_post") {
           bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
         } else {
-          String restult= sendCapturedImage2Telegram(chat_id);
-          Serial.println("restult: "+restult);        
+          String result= sendCapturedImage2Telegram2(chat_id);
+          Serial.println("result: "+result);        
         }        
         Serial.println("handleNewMessages/sendPhoto:END");
         bPrintOptions=false;

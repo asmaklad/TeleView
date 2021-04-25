@@ -56,6 +56,8 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 Problem  Description |   Solution
 ----------------------- |  -----------
 Unable to connect to Telegram |  downgrade ESP32 library to version 1.0.4
+Unable to send photo and you get this error "[E][ssl_client.cpp:36] _handle_error(): [send_ssl_data():301]: (-80) UNKNOWN ERROR CODE (0050)"
+  |  downgrade ESP32 library to version 1.0.4
 SSID credentials not saved | downgrade Arduino JSON to ArduinoJson 1.0.6 
 
 

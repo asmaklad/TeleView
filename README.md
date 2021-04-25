@@ -48,17 +48,18 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 * ESP32 for Arduino IDE https://github.com/espressif/arduino-esp32
 
 ## Required Libraries:
-* AutoConnect
-* ArduinoJson - V5.13.5
-* Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
-* Some known issues are sovled by downgrading somme of the libraries:
 
-Problem  Description |   Solution
------------------------ |  -----------
-Unable to connect to Telegram |  downgrade ESP32 library to version 1.0.4
-Unable to send photo and you get this error "[E][ssl_client.cpp:36] _handle_error(): [send_ssl_data():301]: (-80) UNKNOWN ERROR CODE (0050)"
-  |  downgrade ESP32 library to version 1.0.4
-SSID credentials not saved | downgrade Arduino JSON to ArduinoJson 1.0.6 
+* TeleView was tested with these versions of the libraries. just use the latest and if you face problems, then downgrade to those versions
+
+Library | Version
+--------| ---------
+ESP32 board libs | 1.0.6
+UniversalTelegramBot | 1.3.0
+ArduinoJson | 6.17.3
+Adafruit GFX Library  | 1.10.7
+Adafruit  BusIO | 1.7.3
+Adafruit  SSD1306 | 2.4.4
+AutoConnect | 1.2.2
 
 
 ## User Guide:

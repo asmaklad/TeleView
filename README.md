@@ -1,7 +1,26 @@
 # TeleView:
-	* A telegram-bot to control an ESP-Camera enabled board with many features
+	A telegram-bot project to control an ESP32-Camera enabled board with many features.
 
-## Main Features and snapshots
+- [TeleView:](#teleview)
+	- [Main features and snapshots](#main-features-and-snapshots)
+	- [Generic Faetures:](#generic-faetures)
+	- [Specific Features per Type of Board:](#specific-features-per-type-of-board)
+- [Tested Boards:](#tested-boards)
+	- [Required Installation:](#required-installation)
+	- [Required Libraries:](#required-libraries)
+	- [User Guide:](#user-guide)
+		- [Compile and Upload](#compile-and-upload)
+		- [Setting up the WiFi:](#setting-up-the-wifi)
+		- [Setting up the Telegrambot:](#setting-up-the-telegrambot)
+	- [The Telegram Keyboard](#the-telegram-keyboard)
+	- [The Configuration Web interface](#the-configuration-web-interface)
+		- [http://TeleView.local/](#httpteleviewlocal)
+		- [http://TeleView.local/_ac](#httpteleviewlocal_ac)
+		- [Intput Text](#intput-text)
+		- [CheckBoxes:](#checkboxes)
+		- [ComboBoxes:](#comboboxes)
+		- [Buttons:](#buttons)
+## Main features and snapshots
 * Send Photo through telegram upon request.
 <img src="./docs/Photo_sendPhoto.jpg" alt="/sendPhoto" width="40%"/>
 
@@ -16,7 +35,7 @@
 
 
 ## Generic Faetures: 
-* Send Photo through telegram upon request.
+* Sends Photo through telegram upon request.
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options with Telegram :
 	* Generic features: Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse and send photo.
@@ -48,23 +67,27 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 * ESP32 for Arduino IDE https://github.com/espressif/arduino-esp32
 
 ## Required Libraries:
-* AutoConnect
-* ArduinoJson - V5.13.5
-* Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
-* Some known issues are sovled by downgrading somme of the libraries:
 
-Problem  Description |   Solution
------------------------ |  -----------
-Unable to connect to Telegram |  downgrade ESP32 library to version 1.0.4
-SSID credentials not saved | downgrade Arduino JSON to ArduinoJson 1.0.6 
+* TeleView was tested with these versions of the libraries. just use the latest and if you face problems, then downgrade to those versions
+
+Library | Version
+--------| ---------
+ESP32 board libs | 1.0.6
+UniversalTelegramBot | 1.3.0
+ArduinoJson | 6.17.3
+Adafruit GFX Library  | 1.10.7
+Adafruit  BusIO | 1.7.3
+Adafruit  SSD1306 | 2.4.4
+AutoConnect | 1.2.2
 
 
 ## User Guide:
 ### Compile and Upload 
  This project is Compiled and uploaded through ArduinoIDE, use the normal procedure for installing ESP32 in ArduinoIDE and install the following Libs:
 *    AutoConnect
-*    ArduinoJson - V5.13.5
+*    ArduinoJson 
 *    Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
+*    please check the required libraries section above.
 
 Before uploading, chose the target ESP32-CAM Board :
 

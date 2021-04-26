@@ -107,6 +107,7 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     aux["XTelegramUserChatId"].as<AutoConnectInput>().value=configItems.userChatIds;
     aux["XdeviceName"].as<AutoConnectInput>().value=configItems.deviceName;
     aux["XlapseTime"].as<AutoConnectInput>().value=configItems.lapseTime;
+    
     aux["XuseFlash"].as<AutoConnectCheckbox>().checked=configItems.useFlash;
     aux["XhMirror"].as<AutoConnectCheckbox>().checked=configItems.hMirror;
     aux["XvFlip"].as<AutoConnectCheckbox>().checked=configItems.vFlip;
@@ -180,7 +181,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "name": "XuseFlash",
       "type": "ACCheckbox",
       "value": "",
-      "labelPosition": AC_Infront ,
+      "labelPosition": "AC_Infront",
       "label": "Use Falsh when snapping a photo",
       "checked": false,
       "global": true
@@ -189,7 +190,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "name": "XhMirror",
       "type": "ACCheckbox",
       "value": "",
-      "labelPosition": AC_Infront ,
+      "labelPosition": "AC_Infront" ,
       "label": "Horizontal Mirror",
       "checked": false,
       "global": true
@@ -198,7 +199,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "name": "XvFlip",
       "type": "ACCheckbox",
       "value": "",
-      "labelPosition": AC_Infront ,
+      "labelPosition": "AC_Infront" ,
       "label": "Vertical Flip",
       "checked": false,
       "global": true
@@ -207,7 +208,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "name": "XscreenFlip",
       "type": "ACCheckbox",
       "value": "",
-      "labelPosition": AC_Infront ,
+      "labelPosition": "AC_Infront" ,
       "label": "Screen Flip",
       "checked": false,
       "global": true
@@ -216,7 +217,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "name": "XscreenOn",
       "type": "ACCheckbox",
       "value": "",
-      "labelPosition": AC_Infront ,
+      "labelPosition": "AC_Infront" ,
       "label": "OLED Display is On",
       "checked": false,
       "global": true
@@ -225,7 +226,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "name": "XmotDetectOn",
       "type": "ACCheckbox",
       "value": "",
-      "labelPosition": AC_Infront ,
+      "labelPosition": "AC_Infront" ,
       "label": "Motion Detection Enabled",
       "checked": false,
       "global": true

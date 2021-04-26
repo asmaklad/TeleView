@@ -157,7 +157,7 @@ config_item loadConfiguration() {
     ci.screenOn = prefs.getBool("screenOn",configItems.screenOn);
     ci.motDetectOn = prefs.getBool("motDetectOn",configItems.motDetectOn);
     ci.lapseTime=prefs.getInt("lapseTime",configItems.lapseTime);
-    ci.webCaptureOn=prefs.getInt("webCaptureOn",configItems.webCaptureOn);
+    ci.webCaptureOn=prefs.getBool("webCaptureOn",configItems.webCaptureOn);  
     ////////////////////////
     ci.deviceName=prefs.getString("deviceName",configItems.deviceName);
     ci.botTTelegram=prefs.getString("botTTelegram",configItems.botTTelegram);
@@ -196,6 +196,7 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("webCaptureOn",ci->webCaptureOn); bDirty=true; }
     if (prefs.getInt("lapseTime")!=ci->lapseTime)
       { prefs.putInt("lapseTime",ci->lapseTime); bDirty=true; }
+      
     ///////////////////////////////
     if (!prefs.getString("deviceName").equals(ci->deviceName)){
       prefs.putString("deviceName",ci->deviceName);

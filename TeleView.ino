@@ -46,7 +46,8 @@
 #include <WiFiClientSecure.h>
 #include <WebServer.h>
 #include <AutoConnect.h>
-#include "UniversalTelegramBot.h"
+
+#include <ArduinoJson.h>
 #include <Ticker.h>
 #include <ESPmDNS.h>
 #include <WiFiClient.h>
@@ -123,14 +124,18 @@ void setup() {
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){
     config.frame_size = FRAMESIZE_UXGA;
-    config.jpeg_quality = 10;  //0-63 lower number means higher quality
-    //config.jpeg_quality = 0;  //0-63 lower number means higher quality
+    //config.jpeg_quality = 10;  //0-63 lower number means higher quality
+    config.jpeg_quality = 5;  //0-63 lower number means higher quality
     config.fb_count = 2;
   } else {
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;  //0-63 lower number means higher quality
     config.fb_count = 1;
-  }  
+  }
+  Serial.print("frame_size: ");
+  Serial.println( String(resolutions[config.frame_size][0]+":"+resolutions[config.frame_size][1]) );
+  Serial.print("jpeg_quality: ");
+  Serial.println(config.jpeg_quality);
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -163,9 +168,10 @@ void setup() {
   acConfig.psk  = "tv-ei-694";
   acConfig.hostName=configItems.deviceName;  
   acConfig.autoRise=true;
-  //acConfig.autoSave=AUTOCONNECT_USE_PREFERENCES;
+  //AUTOCONNECT_USE_PREFERENCES
+  acConfig.autoSave=AC_SAVECREDENTIAL_AUTO;
   //acConfig.portalTimeout = 60000;  // It will time out in 60 seconds
-  //#define AC_DEBUG
+  #define AC_DEBUG 1
   Portal.config(acConfig);
   Portal.onDetect(captivePortalStarted);
   WiFi.setSleep(false);
@@ -218,7 +224,9 @@ void setup() {
   //
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  bot.setToken(configItems.botTTelegram);
+  botClient.setInsecure();
+  //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
+  bot.updateToken(configItems.botTTelegram);
   bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
   Serial.println("I am Alive!!");
   ///////////////////
@@ -227,7 +235,11 @@ void setup() {
 #endif
 
 #if defined(PIR_PIN)
-  pinMode(PIR_PIN, INPUT_PULLDOWN);
+  // depends on which type of PIR your are using
+  if (PIR_PIN_ON)
+    pinMode(PIR_PIN, INPUT_PULLDOWN); //set default incomming signal to LOW
+  else
+    pinMode(PIR_PIN, INPUT_PULLUP); //set default incomming signal to HIGH
 #endif
   bTelegramBotInitiated=true;
 }
@@ -235,11 +247,16 @@ void setup() {
 void loop() {
   Portal.handleClient();
 #if defined(PIR_PIN)
-  if ( configItems.motDetectOn && digitalRead(PIR_PIN)) {
-    Serial.println("Motion Detected."); 
+  int vPIR = digitalRead(PIR_PIN);
+  /*
+  Serial.print("PIR VALUE:");
+  Serial.println(vPIR );
+  */
+  if ( configItems.motDetectOn && vPIR==PIR_PIN_ON ) {
+    Serial.println("Motion Detected.");
     bot.sendMessage(configItems.adminChatIds, "Motion Detected!","" );
-    String restult= sendCapturedImage2Telegram(configItems.adminChatIds);
-    Serial.println("restult: "+restult);
+    String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+    Serial.println("result: "+result);
     delay(100);
   }  
 #endif
@@ -265,9 +282,9 @@ void loop() {
     }
     if (bTakePhotoTick){
       Serial.println("Tick!"); 
-      bot.sendMessage(configItems.adminChatIds, "Tick!","" );
-      String restult= sendCapturedImage2Telegram(configItems.adminChatIds);
-      Serial.println("restult: "+restult);   
+      bot.sendMessage(configItems.adminChatIds, "Tick!","" );      
+      String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+      Serial.println("result: "+result);   
       bTakePhotoTick=false;
     }
     Bot_lasttime = millis();
@@ -284,6 +301,32 @@ boolean applyConfigItem (config_item* ci) {
   s->set_framesize(s, ci->frameSize);  // UXGA|SXGA|XGA|SVGA|VGA|CIF|QVGA|HQVGA|QQVGA
   s->set_hmirror(s, ci->hMirror);
   s->set_vflip(s, ci->vFlip);
+  // non configurable params:
+    //s->set_gain_ctrl(s, 0); // auto gain off (1 or 0)
+    //s->set_exposure_ctrl(s, 0); // auto exposure off (1 or 0)
+    //s->set_agc_gain(s, 0); // set gain manually (0 - 30)
+    //s->set_aec_value(s, 600); // set exposure manually (0-1200)    
+    // s->set_brightness(s, 0); // (-2 to 2) - set brightness
+    // s->set_awb_gain(s, 0); // Auto White Balance?
+    // s->set_lenc(s, 0); // lens correction? (1 or 0)
+    // s->set_raw_gma(s, 1); // (1 or 0)?
+    // s->set_quality(s, 10); // (0 - 63)
+    // s->set_whitebal(s, 1); // white balance
+    // s->set_wb_mode(s, 1); // white balance mode (0 to 4)
+    // s->set_aec2(s, 0); // automatic exposure sensor? (0 or 1)
+    // s->set_aec_value(s, 0); // automatic exposure correction? (0-1200)
+    // s->set_saturation(s, 0); // (-2 to 2)
+    // s->set_hmirror(s, 0); // (0 or 1) flip horizontally
+    // s->set_gainceiling(s, GAINCEILING_32X); // Image gain (GAINCEILING_x2, x4, x8, x16, x32, x64 or x128)
+    // s->set_contrast(s, 0); // (-2 to 2)
+    // s->set_sharpness(s, 0); // (-2 to 2)
+    // s->set_colorbar(s, 0); // (0 or 1) - testcard
+    // s->set_special_effect(s, 0);
+    // s->set_ae_level(s, 0); // auto exposure levels (-2 to 2)
+    // s->set_bpc(s, 0); // black pixel correction
+    // s->set_wpc(s, 0); // white pixel correction
+    // s->set_dcw(s, 1); // downsize enable? (1 or 0)?
+  //
   tkTimeLapse.detach();
   if (ci->lapseTime >0){
     tkTimeLapse.attach(  ci->lapseTime*60 , tick );

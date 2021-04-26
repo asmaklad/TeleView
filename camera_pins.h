@@ -98,6 +98,12 @@
 
 #define FLASH_LAMP_PIN      4
 
+/*
+//if PIR Sensor is attached:
+#define PIR_PIN 13
+#define PIR_PIN_ON HIGH
+*/
+
 #elif defined(CAMERA_MODEL_TTGO_T1_CAMERA) // Board definition "ESP32 WROVER Module"
 #define PWDN_GPIO_NUM     26
 #define RESET_GPIO_NUM    -1
@@ -124,6 +130,7 @@
 #define USE_OLED_AS_FLASH 1 // the OLEDis on the same side as the camera
 //#define I2C_BME280_ADDR   0x3d
 #define PIR_PIN           33 //GPIO_INPUT_IO_33 //AS312
+#define PIR_PIN_ON        HIGH
 #define BUTTON_PIN        34
 
 #else

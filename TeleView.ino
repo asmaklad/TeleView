@@ -46,7 +46,7 @@
 #include <WiFiClientSecure.h>
 #include <WebServer.h>
 #include <AutoConnect.h>
-#include <UniversalTelegramBot.h>
+
 #include <ArduinoJson.h>
 #include <Ticker.h>
 #include <ESPmDNS.h>
@@ -235,7 +235,11 @@ void setup() {
 #endif
 
 #if defined(PIR_PIN)
-  pinMode(PIR_PIN, INPUT_PULLDOWN);
+  // depends on which type of PIR your are using
+  if (PIR_PIN_ON)
+    pinMode(PIR_PIN, INPUT_PULLDOWN); //set default incomming signal to LOW
+  else
+    pinMode(PIR_PIN, INPUT_PULLUP); //set default incomming signal to HIGH
 #endif
   bTelegramBotInitiated=true;
 }
@@ -243,11 +247,16 @@ void setup() {
 void loop() {
   Portal.handleClient();
 #if defined(PIR_PIN)
-  if ( configItems.motDetectOn && digitalRead(PIR_PIN)) {
-    Serial.println("Motion Detected."); 
+  int vPIR = digitalRead(PIR_PIN);
+  /*
+  Serial.print("PIR VALUE:");
+  Serial.println(vPIR );
+  */
+  if ( configItems.motDetectOn && vPIR==PIR_PIN_ON ) {
+    Serial.println("Motion Detected.");
     bot.sendMessage(configItems.adminChatIds, "Motion Detected!","" );
-    String restult= sendCapturedImage2Telegram2(configItems.adminChatIds);
-    Serial.println("restult: "+restult);
+    String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+    Serial.println("result: "+result);
     delay(100);
   }  
 #endif
@@ -274,8 +283,8 @@ void loop() {
     if (bTakePhotoTick){
       Serial.println("Tick!"); 
       bot.sendMessage(configItems.adminChatIds, "Tick!","" );      
-      String restult= sendCapturedImage2Telegram2(configItems.adminChatIds);
-      Serial.println("restult: "+restult);   
+      String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+      Serial.println("result: "+result);   
       bTakePhotoTick=false;
     }
     Bot_lasttime = millis();

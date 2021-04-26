@@ -1,7 +1,26 @@
 # TeleView:
-	* A telegram-bot to control an ESP-Camera enabled board with many features
+	A telegram-bot project to control an ESP32-Camera enabled board with many features.
 
-## Main Features and snapshots
+- [TeleView:](#teleview)
+	- [Main features and snapshots](#main-features-and-snapshots)
+	- [Generic Faetures:](#generic-faetures)
+	- [Specific Features per Type of Board:](#specific-features-per-type-of-board)
+- [Tested Boards:](#tested-boards)
+	- [Required Installation:](#required-installation)
+	- [Required Libraries:](#required-libraries)
+	- [User Guide:](#user-guide)
+		- [Compile and Upload](#compile-and-upload)
+		- [Setting up the WiFi:](#setting-up-the-wifi)
+		- [Setting up the Telegrambot:](#setting-up-the-telegrambot)
+	- [The Telegram Keyboard](#the-telegram-keyboard)
+	- [The Configuration Web interface](#the-configuration-web-interface)
+		- [http://TeleView.local/](#httpteleviewlocal)
+		- [http://TeleView.local/_ac](#httpteleviewlocal_ac)
+		- [Intput Text](#intput-text)
+		- [CheckBoxes:](#checkboxes)
+		- [ComboBoxes:](#comboboxes)
+		- [Buttons:](#buttons)
+## Main features and snapshots
 * Send Photo through telegram upon request.
 <img src="./docs/Photo_sendPhoto.jpg" alt="/sendPhoto" width="40%"/>
 
@@ -16,7 +35,7 @@
 
 
 ## Generic Faetures: 
-* Send Photo through telegram upon request.
+* Sends Photo through telegram upon request.
 * The telegram bot responds to only the ADMINID (find your telegram CHATID through https://web.telegram.org/#/im?p=@chatid_echo_bot )
 * Control options with Telegram :
 	* Generic features: Camera Resolution, Camera-Flip ,Camera-Mirror ,image-resolution ,Time-Lapse and send photo.

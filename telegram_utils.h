@@ -2,6 +2,7 @@
 #define TELEGRAM_UTILS_H
 
 #define TELEGRAM_DEBUG 1
+#include <UniversalTelegramBot.h>
 #include "esp_camera.h"
 #include "persist.h"
 #include "webPages.h"

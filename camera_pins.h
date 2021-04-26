@@ -137,13 +137,18 @@
 #error "Camera model not selected"
 #endif
 ////////////////////////////////////////
+////////////////////////////////////////
+// in case you want to add a buzzer
+//#define BUZZER_PIN              12
+//#define BUZZER_PIN_ON           HIGH
 
+////////////////////////////////////////
 #if  defined(FLASH_LAMP_PIN)
 #define IS_THERE_A_FLASH 1
 #endif
 
 #if  defined(USE_OLED_AS_FLASH)
-#define IS_THERE_A_FLASH 1    
+#define IS_THERE_A_FLASH 1
 #endif
 ////////////////////////////////////////
 #endif //CAMERA_PINS_H

@@ -269,7 +269,7 @@ void loop() {
   }
 #endif
 #if defined(BUZZER_PIN)
-  if (bMotionDetected){    
+  if (bMotionDetected){
     // Active Buzzer
     digitalWrite (BUZZER_PIN, BUZZER_PIN_ON); //turn buzzer on
     delay(1000);

@@ -44,7 +44,7 @@ int Counter_getNextBufferLen=0;
 String formulateKeyboardJson(){
   String lkeyboardJson = "[";
   lkeyboardJson += "[\"/start\", \"/options\"]";
-  lkeyboardJson += ",[\"/sendPhoto\"]";  
+  lkeyboardJson += ",[\"/sendPhoto\"]";
   lkeyboardJson += ",[\"/vflip\", \"/hmirror\", \"/setlapse\", \"/webCaptureOn\"]";
 #if defined(I2C_DISPLAY_ADDR)
   lkeyboardJson += ",[\"/screenOn\",\"/screenFlip\"]";
@@ -52,9 +52,9 @@ String formulateKeyboardJson(){
 #if defined(IS_THERE_A_FLASH)
   lkeyboardJson += ",[\"/useFlash\"]";
 #endif
-#if defined(PIR_PIN) 
+#if defined(PIR_PIN)
   lkeyboardJson += ",[\"/motDetectOn\"]";
-#endif  
+#endif
   lkeyboardJson += ",[";
   String sep="";
   for (int i=0;i<12;i++){
@@ -67,7 +67,39 @@ String formulateKeyboardJson(){
   }
   lkeyboardJson += "]";
 
-  lkeyboardJson += "]";  
+  lkeyboardJson += "]";
+  Serial.println(lkeyboardJson);
+  return(lkeyboardJson);
+}
+
+///////////////////////////////////////////////
+String formulateKeyboardJson2(){
+  String lkeyboardJson = "[";
+  lkeyboardJson += "[\"/start\", \"/options\"]";
+  lkeyboardJson += ",[\"/sendPhoto\"]";
+  lkeyboardJson += ",[\"/vflip\", \"/hmirror\", \"/setlapse\", \"/webCaptureOn\"]";
+#if defined(I2C_DISPLAY_ADDR)
+  lkeyboardJson += ",[\"/screenOn\",\"/screenFlip\"]";
+#endif
+#if defined(IS_THERE_A_FLASH)
+  lkeyboardJson += ",[\"/useFlash\"]";
+#endif
+#if defined(PIR_PIN)
+  lkeyboardJson += ",[\"/motDetectOn\"]";
+#endif
+  lkeyboardJson += ",[";
+  String sep="";
+  for (int i=0;i<12;i++){
+    lkeyboardJson += sep+"\"/"+String(resolutions[i][0])+"\"";
+    sep=",";
+    if ( !((i+1)%6) ){
+      sep="";
+      lkeyboardJson +=  "],[";
+    }
+  }
+  lkeyboardJson += "]";
+
+  lkeyboardJson += "]";
   Serial.println(lkeyboardJson);
   return(lkeyboardJson);
 }
@@ -78,11 +110,11 @@ String sendCapturedImage2Telegram2(String chat_id) {
   String getAll="", getBody = "";
 
   camera_fb_t * fb = NULL;
-  
+
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
     Serial.println("Switching Flash-lamp ON");
-    digitalWrite(FLASH_LAMP_PIN, HIGH); 
+    digitalWrite(FLASH_LAMP_PIN, HIGH);
     delay(250);
     Serial.println("The Flash-lamp is ON");
   }
@@ -94,22 +126,23 @@ String sendCapturedImage2Telegram2(String chat_id) {
     display_AllWhite();
     delay(250);
     Serial.println("Flash-OLED is ON");
-  }  
+  }
 #endif
-  
+
   Serial.println("Capture Photo");
-  fb = esp_camera_fb_get();  
+  fb = esp_camera_fb_get();
   if(!fb) {
     Serial.println("Camera capture failed");
     delay(1000);
     ESP.restart();
-  }  
-
+  }
+  int fb_width=fb->width;
+  int fb_height=fb->height;
   Serial.println("sendChatAction#1");
-  bot.sendChatAction(chat_id, "upload_photo");  
-  // reset the client connection 
+  bot.sendChatAction(chat_id, "upload_photo");
+  // reset the client connection
   if (botClient.connected()) {
-    #ifdef TELEGRAM_DEBUG  
+    #ifdef TELEGRAM_DEBUG
         Serial.println(F("Closing client"));
     #endif
     botClient.stop();
@@ -152,29 +185,28 @@ String sendCapturedImage2Telegram2(String chat_id) {
       size_t remainder = fbLen%1024;
       botClient.write(fbBuf, remainder);
     }
-  }  
-  
+  }
+
   botClient.print(tail);
-  
   esp_camera_fb_return(fb);
-  
+
   int waitTime = 10000;   // timeout 10 seconds
   long startTime = millis();
   boolean state = false;
-  
+
   while ((startTime + waitTime) > millis())
   {
     Serial.print(".");
-    delay(100);      
-    while (botClient.available()) 
+    delay(100);
+    while (botClient.available())
     {
         char c = botClient.read();
-        if (state==true) getBody += String(c);      
-        if (c == '\n') 
+        if (state==true) getBody += String(c);
+        if (c == '\n')
         {
-          if (getAll.length()==0) state=true; 
+          if (getAll.length()==0) state=true;
           getAll = "";
-        } 
+        }
         else if (c != '\r')
           getAll += String(c);
         startTime = millis();
@@ -183,7 +215,7 @@ String sendCapturedImage2Telegram2(String chat_id) {
   }
   Serial.println(getBody);
   Serial.println();
-  PICTURES_COUNT++; 
+  PICTURES_COUNT++;
   botClient.stop();
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
@@ -196,7 +228,7 @@ String sendCapturedImage2Telegram2(String chat_id) {
 #if defined(USE_OLED_AS_FLASH)
   display_Clear();
 #endif
-  bot.sendMessage(chat_id, "Photo sent","" );
+  bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen)+"b","" );
   return("success");
 }
 
@@ -209,7 +241,7 @@ void handleNewMessages(int numNewMessages) {
   for (int i=0; i<numNewMessages; i++) {
     String chat_id = String(bot.messages[i].chat_id);    
     Serial.println("ChatID: "+chat_id);    
-    if (chat_id.equals(configItems.adminChatIds)) {
+    if (chat_id.equals(configItems.adminChatIds) || chat_id.equals(configItems.userChatIds)) {
       String text = bot.messages[i].text;
       String from_name = bot.messages[i].from_name;
       if (from_name == "") 
@@ -219,19 +251,19 @@ void handleNewMessages(int numNewMessages) {
       if (bSetLapseMode) {
         bSetLapseMode=false;
         configItems.lapseTime=(int) text.toInt();
-      }      
+      }
       if (text == "/sendPhoto") {
         Serial.println("handleNewMessages/sendPhoto:BEGIN");
         if(bot.messages[i].type == "channel_post") {
           bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
         } else {
           String result= sendCapturedImage2Telegram2(chat_id);
-          Serial.println("result: "+result);        
-        }        
+          Serial.println("result: "+result);
+        }
         Serial.println("handleNewMessages/sendPhoto:END");
         bPrintOptions=false;
       }else if (text == "/hmirror") {
-        configItems.hMirror = !configItems.hMirror;        
+        configItems.hMirror = !configItems.hMirror;
       }else if (text == "/vflip") {
         configItems.vFlip = !configItems.vFlip;
       }else if (text == "/useFlash") {
@@ -251,8 +283,9 @@ void handleNewMessages(int numNewMessages) {
         bSetLapseMode=true;
         bPrintOptions=false;
       }else if (text == "/start") {
-        String welcome = "```\n";   
-        welcome += "*Command*    |*Description*\n";        
+        String welcome = "```\n";
+        welcome += "*Command*    |*Description*\n";
+        welcome += "-----|-----\n";
         welcome += "/start       | sends this message\n";
         welcome += "/options     | returns the reply keyboard\n";
         welcome += "/hmirror     | Camera Horizontal MIRROR\n";
@@ -261,12 +294,12 @@ void handleNewMessages(int numNewMessages) {
         welcome += "/webCaptureOn| enables and disbales the /capture.jpg url\n";
 #if defined(IS_THERE_A_FLASH)
         welcome += "/useFlash    | Flash is Enabled\n";
-#endif        
-#if defined(I2C_DISPLAY_ADDR)        
+#endif
+#if defined(I2C_DISPLAY_ADDR)
         welcome += "/screenFlip  | Screen Flip\n";
         welcome += "/scrrenOn    | Screen Enabled\n";
 #endif
-#if defined(PIR_PIN)        
+#if defined(PIR_PIN)
         welcome += "/motDetectOn | Motion Detection Enabled\n";
 #endif
         welcome += "/sendPhoto   | Send a Photo from the Camera\n";
@@ -292,11 +325,11 @@ void handleNewMessages(int numNewMessages) {
         Serial.println(welcome2);
         bot.sendMessage(chat_id, welcome2, "Markdown");
         ////////////////////////////////////////
-        bot.sendMessageWithReplyKeyboard(chat_id, "Choose from one of the options belowX", "", keyboardJson, true);
+        keyboardJson=formulateKeyboardJson();
+        bot.sendMessageWithReplyKeyboard(chat_id, "Choose from one of the options below:", "", keyboardJson, true);
       }else if (matchResolutionText(text)){
-        configItems.frameSize=(framesize_t) (matchResolutionText(text)-1);        
+        configItems.frameSize=(framesize_t) (matchResolutionText(text)-1);
       }
-      
       ///////////////////////////////////
       Serial.println("saveConfiguration(configItems);");
       boolean bDirty=saveConfiguration(&configItems);
@@ -306,8 +339,8 @@ void handleNewMessages(int numNewMessages) {
       }
       if(bPrintOptions){
         Serial.println("printConfiguration(&configItems);");
-        Serial.println(printConfiguration(&configItems,"\t"));
-        bot.sendMessage(chat_id, printConfiguration(&configItems), "Markdown");
+        Serial.println(printConfiguration(&configItems,"|","|\n","|"));
+        bot.sendMessage(chat_id, printConfiguration(&configItems,"|","|\n","|"), "MarkDown");
         bPrintOptions=false;
       }
     }else{

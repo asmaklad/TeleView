@@ -225,61 +225,66 @@ boolean saveConfiguration(config_item* ci) {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-String printConfiguration(config_item* ci,String prefix="") {
+String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",char* sep="|") {
   String result = "";
-  result += prefix+"*Attribute        | Value* \n";
-  result += prefix+"```\n";
-  result += prefix+"Device Name      |";
-  result += ci->deviceName + "\n";
+  String prefix=String(prefixC);
+  String suffix=String(suffixC);
+  result += "```";
+  result += prefix+" *Attribute*     "+sep+" *Value* "+suffix;
+  result += prefix+"Device Name      "+sep+"";
+  result += ci->deviceName + suffix;
+  result += prefix+"Local IP         "+sep+"";
+  result += "<http://" + WiFi.localIP().toString() +"/>" + suffix;
+  result += prefix+"Local URL        "+sep+"";
+  result += "<http://" + ci->deviceName +".local/>" + suffix;
 #if defined(IS_THERE_A_FLASH)
-  result += prefix+"useFlash         |";
-  result += (ci->useFlash ? String("true") : String("false")) + "\n";  
-#endif  
+  result += prefix+"useFlash         "+sep+"";
+  result += (ci->useFlash ? String("true") : String("false")) +suffix;
+#endif
 #if defined(I2C_DISPLAY_ADDR)
-  result += prefix+"screenOn         |";
-  result += (ci->screenOn ? String("true") : String("false")) + "\n";  
-  result += prefix+"screenFlip       |";
-  result += (ci->screenFlip ? String("true") : String("false")) + "\n";  
+  result += prefix+"screenOn         "+sep+"";
+  result += (ci->screenOn ? String("true") : String("false")) +suffix;
+  result += prefix+"screenFlip       "+sep+"";
+  result += (ci->screenFlip ? String("true") : String("false")) +suffix;
 #endif
 #if defined(PIR_PIN)
-  result += prefix+"motDetectOn      |";
-  result += (ci->motDetectOn ? String("true") : String("false")) + "\n";  
-#endif  
-  result += prefix+"hMirror          |";
-  result += (ci->hMirror ? String("true") : String("false")) + "\n";
-  result += prefix+"vFlip            |";
-  result += (ci->vFlip ? String("true") : String("false")) + "\n";
-  result += prefix+"webCaptureOn     |";
-  result += (ci->webCaptureOn ? String("true") : String("false")) + "\n";
-  result += prefix+"frameSize        |";
+  result += prefix+"motDetectOn      "+sep+"";
+  result += (ci->motDetectOn ? String("true") : String("false")) + suffix;
+#endif
+  result += prefix+"hMirror          "+sep+"";
+  result += (ci->hMirror ? String("true") : String("false")) + suffix;
+  result += prefix+"vFlip            "+sep+"";
+  result += (ci->vFlip ? String("true") : String("false"))  + suffix;
+  result += prefix+"webCaptureOn     "+sep+"";
+  result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
+  result += prefix+"frameSize        "+sep+"";
   result += String((unsigned int) ci->frameSize) + ",";
   result += resolutions[((unsigned int) ci->frameSize)][0] + ",";
-  result += resolutions[((int) ci->frameSize)][1] + "\n";
-  //result += prefix+"botTTelegram   |";
-  //result += ci->botTTelegram+"\n";  
-  result += prefix+"adminChatIds     |";
-  result += ci->adminChatIds+"\n";
-  result += prefix+"userChatIds      |";
-  result += ci->userChatIds+"\n";
-  result += prefix+"lapseTime        |";
-  result += String(ci->lapseTime)+"\n";
-  result += prefix+"timeZone         |";
-  result += ci->timeZone+"\n";
+  result += resolutions[((int) ci->frameSize)][1] +suffix;
+  //result += prefix+"botTTelegram   "+sep+"";
+  //result += ci->botTTelegram+suffix;
+  result += prefix+"adminChatIds     "+sep+"";
+  result += ci->adminChatIds+suffix;
+  result += prefix+"userChatIds      "+sep+"";
+  result += ci->userChatIds+suffix;
+  result += prefix+"lapseTime        "+sep+"";
+  result += String(ci->lapseTime)+suffix;
+  result += prefix+"timeZone         "+sep+"";
+  result += ci->timeZone+suffix;
   struct tm *tm;
   time_t  t;
   char    dateTime[100];
-  result += prefix+"Last Photo taken |";
+  result += prefix+"Last Photo taken "+sep+"";
   if (timeOfLastPhoto>0){
     t = time(NULL)-timeOfLastPhoto;
     tm = localtime(&t);  
     sprintf(dateTime, "%02d Y %02d Mon %02d D,%02d H:%02d Min:%02d S\0",
       tm->tm_year + 1900-1970, tm->tm_mon , tm->tm_mday-1,
       tm->tm_hour, tm->tm_min, tm->tm_sec);
-    result += String(dateTime)+"\n";  
+    result += String(dateTime)+suffix;
   }else{
-    result += "UNKNOWN \n";
+    result += "UNKNOWN" +suffix;
   }
-    
   result += "```";
   return (result);
 }

@@ -30,8 +30,8 @@
 
 /*
  * TODO:
- * 
- *  -   Utilize multiple Telegram-bot Admin IDs. 
+ *
+ *  -   Utilize multiple Telegram-bot Admin IDs.
  *  -   Utilize multiple Telegram-bot User IDs.
  *  -   Admins have abaility to control options through Telegram.
  *  -   Users can only request photos through Telegram.
@@ -55,6 +55,7 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
+
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
@@ -84,6 +85,7 @@ boolean applyConfigItem (config_item* ci);
 #include "telegram_utils.h"
 
 bool bTakePhotoTick=false;
+boolean bMotionDetected=false;
 Ticker tkTimeLapse;
 //****************************************************************//
 void setup() {
@@ -241,8 +243,15 @@ void setup() {
   else
     pinMode(PIR_PIN, INPUT_PULLUP); //set default incomming signal to HIGH
 #endif
+#if defined(BUZZER_PIN)
+  pinMode(BUZZER_PIN,OUTPUT);
+#endif
   bTelegramBotInitiated=true;
 }
+
+
+//****************************************************************//
+//**********************   The LOOP   ****************************//
 //****************************************************************//
 void loop() {
   Portal.handleClient();
@@ -257,8 +266,20 @@ void loop() {
     bot.sendMessage(configItems.adminChatIds, "Motion Detected!","" );
     String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
     Serial.println("result: "+result);
+    bMotionDetected=true;
     delay(100);
-  }  
+  } else{
+    bMotionDetected=false;
+  }
+#endif
+#if defined(BUZZER_PIN)
+  if (bMotionDetected){
+    // Active Buzzer
+    digitalWrite (BUZZER_PIN, BUZZER_PIN_ON); //turn buzzer on
+    delay(1000);
+  }else{
+    digitalWrite (BUZZER_PIN, !BUZZER_PIN_ON);  //turn buzzer off
+  }
 #endif
 #if defined(I2C_DISPLAY_ADDR)
   line1=String(WiFi.SSID());

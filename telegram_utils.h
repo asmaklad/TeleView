@@ -162,9 +162,9 @@ void handleNewMessages(int numNewMessages) {
            );
         }
         if ( bInlineKeyboardExtraOptions ){
-          if (text == "/hmirror") {
+          if (text == "/hMirror") {
             configItems.hMirror = !configItems.hMirror;
-          }else if (text == "/vflip") {
+          }else if (text == "/vFlip") {
             configItems.vFlip = !configItems.vFlip;
           }else if (text == "/useFlash") {
             configItems.useFlash = !configItems.useFlash;
@@ -236,8 +236,8 @@ void handleNewMessages(int numNewMessages) {
           welcome += "-----|-----\n";
           welcome += "/start       | sends this message\n";
           welcome += "/options     | returns the reply keyboard\n";
-          welcome += "/hmirror     | Camera horizontal MIRROR\n";
-          welcome += "/vflip       | Camera vertical FLIP\n";
+          welcome += "/hMirror     | Camera horizontal MIRROR\n";
+          welcome += "/vFlip       | Camera vertical FLIP\n";
           welcome += "/setlapse    | Sets the periodical sending of photo in min (0 is disable)\n";
           welcome += "/webCaptureOn| enables and disbales the /capture.jpg url\n";
   #if defined(IS_THERE_A_FLASH)

@@ -17,13 +17,13 @@ String resolutions[][12]={
   {"QCIF",   "176x144"},
   {"HQVGA",  "240x176"},
   {"QVGA",   "320x240"},
-  {"CIF",    "400x296"},
+  {"CIF",    "400x296"}, // 352 x 288
   {"VGA",    "640x480"},
   {"SVGA",   "800x600"},
   {"XGA",    "1024x768"},
   {"SXGA",   "1280x1024"},
   {"UXGA",   "1600x1200"},
-  {"QXGA",   "2048*1536"} 
+  {"QXGA",   "2048x1536"}
 };
 ///////////////////////////////////////////////////////////
 typedef struct {
@@ -63,11 +63,14 @@ unsigned int matchResolutionText(String text){
   int result=0;
   Serial.println("TESTX:"+text);
   for (int i=0;i<12;i++){
-    Serial.println("compareTo:"+String("/"+resolutions[i][0]));
-    if ((text.compareTo("/"+String(resolutions[i][0])))==0){
-      result=i+1;
+    Serial.println("compareTo:"+String(resolutions[i][0]));
+    if ((text.compareTo(String(resolutions[i][0])))==0){
+      result=i;
       break;
     }
+  }
+  if (result==0){
+    Serial.println("No Match Found!");
   }
   return(result);
 }

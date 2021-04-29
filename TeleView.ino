@@ -30,12 +30,6 @@
 
 /*
  * TODO:
- *
- *  -   Utilize multiple Telegram-bot Admin IDs.
- *  -   Utilize multiple Telegram-bot User IDs.
- *  -   Admins have abaility to control options through Telegram.
- *  -   Users can only request photos through Telegram.
- *
  *  -   TimeZone NTP API.
  *  -   Add Google Geolocation API through Wifi.
  *  -   Use clock & location in Something useful such as taking photos only between sunrise and sunset option.
@@ -62,8 +56,8 @@
 //#define CAMERA_MODEL_ESP_EYE
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
-//#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-#define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "ESP32 WROVER Module" or "TTGO T1" 
+#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
+//#define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "ESP32 WROVER Module" or "TTGO T1" 
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 //////////////////////////////////////
@@ -121,7 +115,6 @@ void setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  
   config.pixel_format = PIXFORMAT_JPEG;
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){

@@ -52,6 +52,8 @@ String formulateKeyboardJson(){
   lkeyboardJson +=     ",\"/changeRes\"]";
   lkeyboardJson += ",[\"/moreSettings\"";
   lkeyboardJson +=     ",\"/setlapse\"]";
+  lkeyboardJson += ",[\"/restartESP\"]";
+  
   lkeyboardJson += "]";
   Serial.print("formulateKeyboardJson:");
   Serial.println(lkeyboardJson);
@@ -67,7 +69,9 @@ String formulateResolutionInlineKeyBoard(){
   } else {
     maxRes = FRAMESIZE_SVGA;
   }
-  for (int i=0;i<maxRes+2;i++){
+  Serial.print("formulateResolutionInlineKeyBoard:maxRes: ");
+  Serial.println (maxRes);
+  for (int i=0;i<=maxRes;i++){
     String checkMark="";
     if (configItems.frameSize == i){
       checkMark="\u2705";
@@ -152,7 +156,10 @@ void handleNewMessages(int numNewMessages) {
         //if resolution change
         if ( bInlineKeyboardResolution ){
           if (matchResolutionText(text)){
-            configItems.frameSize=(framesize_t) (matchResolutionText(text));
+            //framesize_t https://github.com/espressif/esp32-camera/blob/master/driver/include/sensor.h
+            int result=matchResolutionText(text);
+            result=(result<0?0:result);
+            configItems.frameSize=(framesize_t) result;
           }
           bot.sendMessageWithInlineKeyboard(chat_id,
            "Select the resolution", 
@@ -229,30 +236,31 @@ void handleNewMessages(int numNewMessages) {
           bInlineKeyboardExtraOptions=true;
           bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "", formulateOptionsInlineKeyBoard());
         }else if(text == "/restartESP") {
-          //ESP.restart();
+          numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
+          ESP.restart();
         }else if (text == "/start") {
           String welcome = "```\n";
           welcome += "*Command*    |*Description*\n";
           welcome += "-----|-----\n";
           welcome += "/start       | sends this message\n";
           welcome += "/options     | returns the reply keyboard\n";
-          welcome += "/hMirror     | Camera horizontal MIRROR\n";
-          welcome += "/vFlip       | Camera vertical FLIP\n";
           welcome += "/setlapse    | Sets the periodical sending of photo in min (0 is disable)\n";
-          welcome += "/webCaptureOn| enables and disbales the /capture.jpg url\n";
-  #if defined(IS_THERE_A_FLASH)
-          welcome += "/useFlash    | Flash is enabled\n";
-  #endif
-  #if defined(I2C_DISPLAY_ADDR)
-          welcome += "/screenFlip  | Screen flip\n";
-          welcome += "/scrrenOn    | Screen enabled\n";
-  #endif
-  #if defined(PIR_PIN)
-          welcome += "/motDetectOn | Motion detection enabled\n";
-  #endif
           welcome += "/sendPhoto   | Send a Photo from the camera\n";
           welcome += "/changeRes   | Change the resoltion of the camera\n";
           welcome += "/moreSettings| Access more settings\n";
+          welcome += "\t hMirror     | Camera horizontal MIRROR\n";
+          welcome += "\t vFlip       | Camera vertical FLIP\n";
+          welcome += "\t webCaptureOn| enables and disbales the /capture.jpg url\n";
+  #if defined(IS_THERE_A_FLASH)
+          welcome += "\t useFlash    | Flash is enabled\n";
+  #endif
+  #if defined(I2C_DISPLAY_ADDR)
+          welcome += "\t screenFlip  | Screen flip\n";
+          welcome += "\t scrrenOn    | Screen enabled\n";
+  #endif
+  #if defined(PIR_PIN)
+          welcome += "\t motDetectOn | Motion detection enabled\n";
+  #endif
           welcome += "```";
           Serial.println(welcome);
           bot.sendMessage(chat_id, welcome, "Markdown");
@@ -355,20 +363,33 @@ String sendCapturedImage2Telegram2(String chat_id) {
 
   uint8_t *fbBuf = fb->buf;
   size_t fbLen = fb->len;
+  size_t sentB =0;
+  Serial.println("/");
   for (size_t n=0;n<fbLen;n=n+1024) {
     if (n+1024<fbLen) {
       botClient.write(fbBuf, 1024);
       fbBuf += 1024;
+      sentB += 1024;
     }
     else if (fbLen%1024>0) {
       size_t remainder = fbLen%1024;
       botClient.write(fbBuf, remainder);
+      sentB += remainder;
     }
+    Serial.print("*");
   }
-
+  Serial.println("/");
+  
   botClient.print(tail);
   esp_camera_fb_return(fb);
 
+  /////////////
+  //uint8_t fbBufX[]={1};
+  //size_t oneByte=(size_t) 1;
+  /////////////
+
+  Serial.print ("sendCapturedImage2Telegram2:sentB:");
+  Serial.println (sentB);
   int waitTime = 10000;   // timeout 10 seconds
   long startTime = millis();
   boolean state = false;
@@ -380,7 +401,14 @@ String sendCapturedImage2Telegram2(String chat_id) {
     while (botClient.available())
     {
         char c = botClient.read();
-        if (state==true) getBody += String(c);
+        if (state==true) {
+          getBody += String(c);
+        }
+        /*
+        else{
+          botClient.write(fbBufX,oneByte);
+        }
+        */
         if (c == '\n')
         {
           if (getAll.length()==0) state=true;
@@ -392,6 +420,8 @@ String sendCapturedImage2Telegram2(String chat_id) {
      }
      if (getBody.length()>0) break;
   }
+  Serial.println("");
+  Serial.print("sendCapturedImage2Telegram2:getBody: ");
   Serial.println(getBody);
   Serial.println();
   PICTURES_COUNT++;

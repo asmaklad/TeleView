@@ -15,12 +15,20 @@ AutoConnectAux auxPageConfig;
 void populateResolutionsSelects(AutoConnectAux& aux){
   //aux.fetchElement();
   AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
-  selectElementFS.empty();    
-  for (int n = 0; n < 12; n++) {
-    selectElementFS.add(String(resolutions[n][0]+":"+resolutions[n][1]));    
+  selectElementFS.empty();
+  int maxRes=0;
+  if(psramFound()){
+    maxRes = FRAMESIZE_UXGA;
+  } else {
+    maxRes = FRAMESIZE_SVGA;
+  }
+  Serial.print("populateResolutionsSelects:maxRes: ");
+  Serial.println (maxRes);
+  for (int n = 0; n <= maxRes; n++) {
+    selectElementFS.add(String(resolutions[n][0]+":"+resolutions[n][1]));
   }
   AutoConnectSelect& selectElementTZ = aux["Xtimezone"].as<AutoConnectSelect>();
-  selectElementTZ.empty();    
+  selectElementTZ.empty();
   for (int n = 0; n < sizeof(TZ)/sizeof(Timezone_t) ; n++) {
     selectElementTZ.add( String(TZ[n].zone) );
   }
@@ -89,7 +97,7 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     if (args.hasArg("XframeSize")){
       String framsizeText=args.arg("XframeSize");
       framsizeText=framsizeText.substring(0,framsizeText.indexOf(":"));
-      unsigned int matched=matchResolutionText("/"+framsizeText)-1;
+      unsigned int matched=matchResolutionText(framsizeText);
       configItems.frameSize=(framesize_t) (matched) ;
     }
     configItems.hMirror=(args.hasArg("XhMirror")?true:false);

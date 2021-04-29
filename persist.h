@@ -11,19 +11,21 @@ Preferences prefs;
 
 time_t timeOfLastPhoto=0;
 
-String resolutions[][12]={ 
-  {"QQVGA",  "160x120"},
-  {"QQVGA2", "128x160"},
-  {"QCIF",   "176x144"},
-  {"HQVGA",  "240x176"},
-  {"QVGA",   "320x240"},
-  {"CIF",    "400x296"}, // 352 x 288
-  {"VGA",    "640x480"},
-  {"SVGA",   "800x600"},
-  {"XGA",    "1024x768"},
-  {"SXGA",   "1280x1024"},
-  {"UXGA",   "1600x1200"},
-  {"QXGA",   "2048x1536"}
+String resolutions[][13]={ 
+  {"96X96",    "96x96" },				      //    FRAMESIZE_96X96,    // 96x96
+  {"QQVGA",    "160x120" },           //    FRAMESIZE_QQVGA,    // 160x120
+  {"QCIF",     "176x144" },           //    FRAMESIZE_QCIF,     // 176x144
+  {"HQVGA",    "240x176" },           //    FRAMESIZE_HQVGA,    // 240x176
+  {"240X240",  "240x240" },           //    FRAMESIZE_240X240,  // 240x240
+  {"QVGA",     "320x240" },           //    FRAMESIZE_QVGA,     // 320x240
+  {"CIF",      "400x296" },           //    FRAMESIZE_CIF,      // 400x296
+  {"HVGA",     "480x320" },           //    FRAMESIZE_HVGA,     // 480x320
+  {"VGA",      "640x480" },           //    FRAMESIZE_VGA,      // 640x480
+  {"SVGA",     "800x600" },           //    FRAMESIZE_SVGA,     // 800x600
+  {"XGA",      "1024x768" },          //    FRAMESIZE_XGA,      // 1024x768
+  {"HD",       "1280x720" },          //    FRAMESIZE_HD,       // 1280x720
+  {"SXGA",     "1280x1024" },         //    FRAMESIZE_SXGA,     // 1280x1024
+  {"UXGA",     "1600x1200" }          //    FRAMESIZE_UXGA,     // 1600x1200
 };
 ///////////////////////////////////////////////////////////
 typedef struct {
@@ -59,20 +61,28 @@ static const Timezone_t TZ[] = {
     { "Pacific/Samoa", "oceania.pool.ntp.org", -11 }
   };
 ////////////////////////////////////////////////////////////////////////////
-unsigned int matchResolutionText(String text){
-  int result=0;
+int matchResolutionText(String text){
+  int result=-1;
   Serial.println("TESTX:"+text);
-  for (int i=0;i<12;i++){
+  int maxRes=0;
+  if(psramFound()){
+    maxRes = FRAMESIZE_UXGA;
+  } else {
+    maxRes = FRAMESIZE_SVGA;
+  }
+  Serial.print("matchResolutionText:maxRes: ");
+  Serial.println (maxRes);
+  for (int i=0;i<=maxRes;i++){
     Serial.println("compareTo:"+String(resolutions[i][0]));
     if ((text.compareTo(String(resolutions[i][0])))==0){
       result=i;
       break;
     }
   }
-  if (result==0){
-    Serial.println("No Match Found!");
+  if (result==-1){
+    Serial.println("matchResolutionText:No Match Found!");
   }
-  return(result);
+  return( result);
 }
 ////////////////////////////////////////////////////////////////////////////
 struct config_item {
@@ -262,6 +272,9 @@ String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",ch
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
   result += prefix+"frameSize        "+sep+"";
   result += String((unsigned int) ci->frameSize) + ",";
+  Serial.print ("printConfiguration:ci->frameSize:");
+  Serial.println (ci->frameSize);
+  ci->frameSize = (ci->frameSize<0? (framesize_t) 0:ci->frameSize);
   result += resolutions[((unsigned int) ci->frameSize)][0] + ",";
   result += resolutions[((int) ci->frameSize)][1] +suffix;
   //result += prefix+"botTTelegram   "+sep+"";
@@ -280,7 +293,7 @@ String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",ch
   result += prefix+"Last Photo taken "+sep+"";
   if (timeOfLastPhoto>0){
     t = time(NULL)-timeOfLastPhoto;
-    tm = localtime(&t);  
+    tm = localtime(&t);
     sprintf(dateTime, "%02d Y %02d Mon %02d D,%02d H:%02d Min:%02d S\0",
       tm->tm_year + 1900-1970, tm->tm_mon , tm->tm_mday-1,
       tm->tm_hour, tm->tm_min, tm->tm_sec);

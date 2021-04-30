@@ -56,8 +56,8 @@
 //#define CAMERA_MODEL_ESP_EYE
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
-#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-//#define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "ESP32 WROVER Module" or "TTGO T1" 
+//#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
+#define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "ESP32 WROVER Module" or "TTGO T1" 
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 //////////////////////////////////////
@@ -66,6 +66,8 @@ String compileTime=String(__TIME__);
 String compileCompiler=String(__cplusplus);
 int PICTURES_COUNT=0;
 //////////////////////////////////////
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+#include "esp_log.h"
 
 //////////////////////////////////////
 #include "persist.h"
@@ -84,8 +86,12 @@ Ticker tkTimeLapse;
 //****************************************************************//
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
-  Serial.begin(115200);
+  Serial.begin(115200);  
   Serial.setDebugOutput(true);
+  esp_log_level_set("*", ESP_LOG_INFO);
+  //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
+  //esp_log_level_set("wifi", ESP_LOG_WARN);      // enable WARN logs from WiFi stack
+  //esp_log_level_set("dhcpc", ESP_LOG_INFO);     // enable INFO logs from DHCP client
   Serial.print("Compile Date:");
   Serial.println(compileDate);
   Serial.print("Compile Time:");
@@ -119,8 +125,7 @@ void setup() {
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){
     config.frame_size = FRAMESIZE_UXGA;
-    //config.jpeg_quality = 10;  //0-63 lower number means higher quality
-    config.jpeg_quality = 5;  //0-63 lower number means higher quality
+    config.jpeg_quality = 10;  //0-63 lower number means higher quality
     config.fb_count = 2;
   } else {
     config.frame_size = FRAMESIZE_SVGA;
@@ -223,6 +228,7 @@ void setup() {
   //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.updateToken(configItems.botTTelegram);
   bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
+  bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "", "Markdown", formulateKeyboardJson(), true);
   Serial.println("I am Alive!!");
   ///////////////////
 #if defined(FLASH_LAMP_PIN)
@@ -296,12 +302,14 @@ void loop() {
     }
     if (bTakePhotoTick){
       Serial.println("Tick!"); 
-      bot.sendMessage(configItems.adminChatIds, "Tick!","" );      
+      bot.sendMessage(configItems.adminChatIds, "Tick!","" );    
+        
       String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+      
       Serial.println("result: "+result);   
       bTakePhotoTick=false;
     }
-    Bot_lasttime = millis();
+    Bot_lasttime = millis(); 
   }
 }
 

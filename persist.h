@@ -64,14 +64,7 @@ static const Timezone_t TZ[] = {
 int matchResolutionText(String text){
   int result=-1;
   Serial.println("TESTX:"+text);
-  int maxRes=0;
-  if(psramFound()){
-    maxRes = FRAMESIZE_UXGA;
-  } else {
-    maxRes = FRAMESIZE_SVGA;
-  }
-  Serial.print("matchResolutionText:maxRes: ");
-  Serial.println (maxRes);
+  int maxRes=FRAMESIZE_UXGA;
   for (int i=0;i<=maxRes;i++){
     Serial.println("compareTo:"+String(resolutions[i][0]));
     if ((text.compareTo(String(resolutions[i][0])))==0){
@@ -100,6 +93,28 @@ struct config_item {
   int lapseTime;
   String timeZone;
   boolean webCaptureOn;
+  // TODO
+  /* 
+   *  useDeepSleep : ON/OFF uses Deep sleep whenever MotionDetect or TimeLapse is enabled
+   *    Usefull when battery operated.
+   *  buzzer : ON/OFF  on motion Detect.
+   *  jpeg_Qualtiy: value 
+   *  WhiteBalance: value 
+   *  Brightness: value 
+   *  save to SD: ON/OFF whenever SD available 
+   *  Alert all : ON/OFF for MotionDetect/timelapse to all chatId's not just Admin
+   *    user_chat_id : can's issue commands to the bot.
+   *  /sendVideo ?
+   *  /sendAudio ?
+   *  motion detect by Image not PIR  ON/OFF
+   *    face detect : ON/OFF and face recognize then add to Photo Caption.
+   *  send-email: email,server,token..etc
+   *  motionDetect Active times: define times where motion detection is enabled.
+   *  send photo at: sunrise, noon, afternoon, late afternoon, sunset. with offset time option.
+   *    Requires Geo Location info (send location telegram message to the bot), 
+   *    Requires NTP syncing. uses time zone ...etc.
+   *  integrate MQTT: on all events ,send an MQTT message
+  */
 } configItems {
   .useFlash = true,
   .frameSize = FRAMESIZE_CIF,
@@ -120,7 +135,7 @@ struct config_item {
 config_item loadConfiguration();
 boolean saveConfiguration(config_item* ci);
 void deleteConfiguration();
-String printConfiguration(config_item* ci,String);
+String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",char* sep="|");
 ////////////////////////////////////////////////////////////////////////////
 void deleteConfiguration(){
   if (!prefs.begin("settings",true))
@@ -238,18 +253,40 @@ boolean saveConfiguration(config_item* ci) {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",char* sep="|") {
+String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep) {
   String result = "";
   String prefix=String(prefixC);
   String suffix=String(suffixC);
-  result += "```";
+  //////
+  result += prefix+"Local IP:"+sep+"";
+  result += "<a href='http://" + WiFi.localIP().toString() +"'>" + WiFi.localIP().toString() +"</a>" + suffix;
+  result += prefix+"Local URL:"+sep+"";
+  result += "<a href='http://" + ci->deviceName +".local'>" + ci->deviceName +".local</a>" + suffix;
+  result += "<pre>\n";
   result += prefix+" *Attribute*     "+sep+" *Value* "+suffix;
   result += prefix+"Device Name      "+sep+"";
   result += ci->deviceName + suffix;
-  result += prefix+"Local IP         "+sep+"";
-  result += "<http://" + WiFi.localIP().toString() +"/>" + suffix;
-  result += prefix+"Local URL        "+sep+"";
-  result += "<http://" + ci->deviceName +".local/>" + suffix;
+  result += prefix+"WIFI SSID        "+sep+"";
+  result += WiFi.SSID() + suffix;
+  result += prefix+"PSRAM ?          "+sep+"";
+  result += (psramFound() ? String("true") : String("false")) +suffix;
+  result += prefix+"PSRAM SIZE       "+sep+"";
+  result += ESP.getPsramSize() +suffix;
+  result += prefix+"Sketch MD5 "+sep+"";
+  result += ESP.getSketchMD5() +suffix;
+  result += prefix+"compileDate      "+sep+"";
+  result += compileDate +suffix;
+  result += prefix+"compileTime      "+sep+"";
+  result += compileTime +suffix;
+  result += prefix+"compileCompiler  "+sep+"";
+  result += compileCompiler +suffix;
+  result += prefix+"Chip Model       "+sep+"";
+  result += ESP.getChipModel()  +suffix;
+  result += prefix+"Chip Revision    "+sep+"";
+  result += ESP.getChipRevision()  +suffix;
+  result += prefix+"Chip Cores       "+sep+"";
+  result += ESP.getChipCores()  +suffix;
+  //////////////////////////////////////////////
 #if defined(IS_THERE_A_FLASH)
   result += prefix+"useFlash         "+sep+"";
   result += (ci->useFlash ? String("true") : String("false")) +suffix;
@@ -301,7 +338,7 @@ String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",ch
   }else{
     result += "UNKNOWN" +suffix;
   }
-  result += "```";
+  result += "</pre>";
   return (result);
 }
 ////////////////////////////////////////////////////////////////////////////

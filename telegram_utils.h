@@ -24,12 +24,11 @@ boolean bInlineKeyboardExtraOptions=false;
 int Bot_mtbs = 1000; //mean time between scan messages
 long Bot_lasttime;   //last time messages' scan has been done
 String keyboardJson = "" ;
-// "[[\"/start\", \"/options\"],[\"/CIF\",\"/XGA\",\"/SXGA\",\"/UXGA\"],[\"/vflip\", \"/hmirror\"],[\"/sendPhoto\"]]" ;
 boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
 //String sendCapturedImage2Telegram(String chat_id);
-String sendCapturedImage2Telegram2(String chat_id);
+String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id);
 void handleNewMessages(int numNewMessages);
 String formulateKeyboardJson();
 
@@ -48,11 +47,11 @@ String formulateKeyboardJson(){
   
   String lkeyboardJson = "[";
   lkeyboardJson += " [\"/start\", \"/options\"]";
-  lkeyboardJson += ",[\"/sendPhoto\"";
-  lkeyboardJson +=     ",\"/changeRes\"]";
+  lkeyboardJson += ",[\"/sendPhoto\"]";
   lkeyboardJson += ",[\"/moreSettings\"";
-  lkeyboardJson +=     ",\"/setlapse\"]";
-  lkeyboardJson += ",[\"/restartESP\"]";
+  lkeyboardJson +=     ",\"/changeRes\"]";
+  lkeyboardJson += ",[\"/setlapse\"";
+  lkeyboardJson +=     ",\"/restartESP\"]";
   
   lkeyboardJson += "]";
   Serial.print("formulateKeyboardJson:");
@@ -64,11 +63,14 @@ String formulateResolutionInlineKeyBoard(){
   String lkeyboardJson = "[";
   String sep="";
   int maxRes=0;
+  /*
   if(psramFound()){
     maxRes = FRAMESIZE_UXGA;
   } else {
     maxRes = FRAMESIZE_SVGA;
   }
+  */
+  maxRes = FRAMESIZE_UXGA;
   Serial.print("formulateResolutionInlineKeyBoard:maxRes: ");
   Serial.println (maxRes);
   for (int i=0;i<=maxRes;i++){
@@ -143,7 +145,7 @@ void handleNewMessages(int numNewMessages) {
   boolean bPrintOptions=true;
   for (int i=0; i<numNewMessages; i++) {
     String chat_id = String(bot.messages[i].chat_id);
-    int message_id = bot.messages[i].message_id;
+    uint16_t message_id = bot.messages[i].message_id;
     Serial.println("ChatID: "+chat_id);
     if (chat_id.equals(configItems.adminChatIds) || chat_id.equals(configItems.userChatIds)) {
       // If the type is a "callback_query", a inline keyboard button was pressed
@@ -214,13 +216,14 @@ void handleNewMessages(int numNewMessages) {
           if(bot.messages[i].type == "channel_post") {
             bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
           } else {
-            String result= sendCapturedImage2Telegram2(chat_id);
+            String result= sendCapturedImage2Telegram2(chat_id,message_id);
             Serial.println("result: "+result);
           }
           Serial.println("handleNewMessages/sendPhoto:END");
           bPrintOptions=false;
         }else if(text == "/options") {
-          bot.sendMessageWithReplyKeyboard(chat_id, "Choose from one of the options below", "", formulateKeyboardJson(), true);
+          bPrintOptions=true;
+          bot.sendMessageWithReplyKeyboard(chat_id, "", "Markdown", formulateKeyboardJson(), true);
         }else if(text == "/changeRes") {
           bPrintOptions=false;
           bInlineKeyboardExtraOptions=false;
@@ -277,8 +280,8 @@ void handleNewMessages(int numNewMessages) {
       }
       if(bPrintOptions){
         Serial.println("printConfiguration(&configItems);");
-        Serial.println(printConfiguration(&configItems,"|","|\n","|"));
-        bot.sendMessage(chat_id, printConfiguration(&configItems,"|","|\n","|"), "MarkDown");
+        Serial.println(printConfiguration(&configItems,"","\n","|"));
+        bot.sendMessage(chat_id, printConfiguration(&configItems,"","\n","|"), "HTML");
         bPrintOptions=false;
         }
     } else {
@@ -292,7 +295,7 @@ void handleNewMessages(int numNewMessages) {
 
 ///////////////////////////////////////////////
 
-String sendCapturedImage2Telegram2(String chat_id) {
+String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
 
@@ -346,50 +349,60 @@ String sendCapturedImage2Telegram2(String chat_id) {
     }
   }
 
-  String head = "--Taiwan\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id + "\r\n--Taiwan\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
-  String tail = "\r\n--Taiwan--\r\n";
+  String head ="";
+  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id +"\r\n";
+  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" +String(fb_width)+"x"+String(fb_height)+", "+String(fb->len) +" B\r\n";
+  if (message_id>0)
+    head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"reply_to_message_id\"; \r\n\r\n" + String(message_id) +"\r\n";
+  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"parse_mode\"; \r\n\r\nMarkdown\r\n";
+  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\n";
+  //"Content-Type: image/jpeg\r\n\r\n"+
+  
+  String tail = "\r\n--ef2ac69f9149220e889abc22b81d1401--\r\n";
 
-  uint16_t imageLen = fb->len;
-  uint16_t extraLen = head.length() + tail.length();
-  uint16_t totalLen = imageLen + extraLen;
+  uint32_t imageLen = fb->len;
+  uint32_t extraLen = head.length() + tail.length();
+  uint32_t totalLen = imageLen + extraLen;
 
   botClient.println("POST /bot"+configItems.botTTelegram+"/sendPhoto HTTP/1.1");
   botClient.println("Host: " + String(myDomain));
-  botClient.println("Content-Length: " + String(totalLen));
-  botClient.println("Content-Type: multipart/form-data; boundary=Taiwan");
   botClient.println("Connection: keep-alive");
+  botClient.println("Content-Length: " + String(totalLen));
+  botClient.println("Content-Type: multipart/form-data; boundary=ef2ac69f9149220e889abc22b81d1401");
   botClient.println();
   botClient.print(head);
+  botClient.println();
 
   uint8_t *fbBuf = fb->buf;
   size_t fbLen = fb->len;
   size_t sentB =0;
-  Serial.println("/");
+  Serial.println("");
+  Serial.print("/");
   for (size_t n=0;n<fbLen;n=n+1024) {
     if (n+1024<fbLen) {
+      Serial.print("_");
       botClient.write(fbBuf, 1024);
       fbBuf += 1024;
       sentB += 1024;
     }
     else if (fbLen%1024>0) {
+      Serial.print("+");
       size_t remainder = fbLen%1024;
       botClient.write(fbBuf, remainder);
       sentB += remainder;
     }
-    Serial.print("*");
+    if(botClient.connected())
+      Serial.print("*");
+    else
+      Serial.print("X");
   }
   Serial.println("/");
-  
   botClient.print(tail);
-  esp_camera_fb_return(fb);
-
-  /////////////
-  //uint8_t fbBufX[]={1};
-  //size_t oneByte=(size_t) 1;
-  /////////////
-
+  
   Serial.print ("sendCapturedImage2Telegram2:sentB:");
   Serial.println (sentB);
+  Serial.println (String(fb_width)+"x"+String(fb_height));
+  
   int waitTime = 10000;   // timeout 10 seconds
   long startTime = millis();
   boolean state = false;
@@ -426,6 +439,7 @@ String sendCapturedImage2Telegram2(String chat_id) {
   Serial.println();
   PICTURES_COUNT++;
   botClient.stop();
+  esp_camera_fb_return(fb);
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
     delay(10);
@@ -437,7 +451,7 @@ String sendCapturedImage2Telegram2(String chat_id) {
 #if defined(USE_OLED_AS_FLASH)
   display_Clear();
 #endif
-  bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen)+"b","" );
+  bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB","" );
   return("success");
 }
 

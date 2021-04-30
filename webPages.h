@@ -17,13 +17,14 @@ void populateResolutionsSelects(AutoConnectAux& aux){
   AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
   selectElementFS.empty();
   int maxRes=0;
+  /*
   if(psramFound()){
     maxRes = FRAMESIZE_UXGA;
   } else {
     maxRes = FRAMESIZE_SVGA;
   }
-  Serial.print("populateResolutionsSelects:maxRes: ");
-  Serial.println (maxRes);
+  */
+  maxRes = FRAMESIZE_UXGA;
   for (int n = 0; n <= maxRes; n++) {
     selectElementFS.add(String(resolutions[n][0]+":"+resolutions[n][1]));
   }

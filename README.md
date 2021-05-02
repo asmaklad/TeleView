@@ -13,6 +13,7 @@
     - [Enabling Disabeling Features at compile time](#enabling-disabeling-features-at-compile-time)
     - [Setting up the WiFi:](#setting-up-the-wifi)
     - [Setting up the Telegrambot:](#setting-up-the-telegrambot)
+    - [OTA](#ota)
     - [Having more than one user to use the bot:](#having-more-than-one-user-to-use-the-bot)
     - [Having multiple boards to use the same bot token:](#having-multiple-boards-to-use-the-same-bot-token)
   - [The Telegram Keyboard](#the-telegram-keyboard)
@@ -57,6 +58,7 @@
 * A deep sleep mode is possible with time-lapse and PIR motiion detection for battery operated scenarios.
 * Usual case , only the admin will be notified of the eventd "Alive", "motion detection" and "time-lapse" , but you can also enable alerting of the userId.
 * Supports multiple Admins and multiple Users through Telegram Groups (explained further below).
+* OTA Features
 
 ## Specific Features per Type of Board:
 * toggle flash when taking a photo : For the AI_Thinker board, there is a very strong led on the same side as camera, which could be used as a flash.
@@ -157,6 +159,15 @@ This could be acquired through a visit to the @chatid_echo_bot Telegrambot https
 * Insert the token and the ChatID of the Admin in the web-interface found at the url "http://<youDeviceAddress>/teleView" and save.
 * Add the Bot to your telegram contacts.
 * Reset your board and you should get an "I am Alive!" messgae from your bot.
+
+### OTA 
+* Through the Autoconnect Library, Teleview supports OTA.
+* by default OTA is disabled. You can trigger it from Telegram , but you can upload the new firmware from the webUI.
+* To enable OTA, use telegram's /moreSettings button and from the inlinekeyboard, "Enable OTA".
+* Go to webUI and a new tab will appera with page title "Update". it wil have a browse and upload buttons use them upload the new bin file from the next  step.
+* Then follow these Instructions to generate the new bin file :  https://hieromon.github.io/AutoConnect/otabrowser.html#how-to-make-the-binary-sketch
+* once the new firmware is uplaoded and implemented, the ESP will Reboot and OTA will be disbaled again. 
+*  OTA configuration item is not stored. The ESP will boot up with status disabled by default.
 
 ### Having more than one user to use the bot: 
 Q) If you are a family and would like to have two or more people access and manage the Telegram bot. how can this be preformed?

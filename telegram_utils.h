@@ -128,11 +128,11 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += (configItems.vFlip?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/vFlip\" }],";
 
-  keyboardJson += R"([{ "text" : "MotionDetect by Vision not PIR -no DeepSleep:)";
+  keyboardJson += R"([{ "text" : "VC MotionDetect:)";
   keyboardJson += (configItems.motionDetectVC?"ON\u2705":"OFF\u274C");
   keyboardJson += R"(", "callback_data" : "/motionDetectVC" }],)";
 
-  keyboardJson += R"([{ "text" : "MotionDetect/timelapse to all chatIds not just Admin:)";
+  keyboardJson += R"([{ "text" : "Alert all:)";
   keyboardJson += (configItems.alertALL?"ON\u2705":"OFF\u274C");
   keyboardJson += R"(", "callback_data" : "/alertALL" }],)";
 
@@ -142,7 +142,7 @@ String formulateOptionsInlineKeyBoard(){
     keyboardJson += R"(", "callback_data" : "/saveToSD" }],)";
   #endif
 
-  keyboardJson += R"([{ "text" : "Goto to deep sleep on MotionDetct and timeLapse:)";
+  keyboardJson += R"([{ "text" : "Enable deep sleep:)";
   keyboardJson += (configItems.useDeepSleep?"ON\u2705":"OFF\u274C");
   keyboardJson += R"(", "callback_data" : "/useDeepSleep" }],)";
 
@@ -157,8 +157,12 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += "\", \"callback_data\" : \"/hMirror\" }],";
 
   keyboardJson += "[{ \"text\" : \"Web Capture is:";
-  keyboardJson += (configItems.webCaptureOn?"ON\u2705":"OFF\274C");
-  keyboardJson += "\", \"callback_data\" : \"/webCaptureOn\" }]";
+  keyboardJson += (configItems.webCaptureOn?"ON\u2705":"OFF\u274C");
+  keyboardJson += "\", \"callback_data\" : \"/webCaptureOn\" }],";
+
+  keyboardJson += "[{ \"text\" : \"OTA is:";
+  keyboardJson += (acConfig.ota==AC_OTA_BUILTIN?"ON\u2705":"OFF\u274C");
+  keyboardJson += "\", \"callback_data\" : \"/OTAOn\" }]";
 
   keyboardJson += "]";
 
@@ -224,10 +228,16 @@ void handleNewMessages(int numNewMessages) {
             configItems.motDetectOn = !configItems.motDetectOn;
           }else if (text == "/webCaptureOn") {
             configItems.webCaptureOn = !configItems.webCaptureOn;
+          }else if (text == "/OTAOn") {
+            if (acConfig.ota==AC_OTA_BUILTIN )
+              acConfig.ota=AC_OTA_EXTRA;
+            else
+              acConfig.ota=AC_OTA_BUILTIN;
+            Portal.config(acConfig);
           }
           bot.sendMessageWithInlineKeyboard(chat_id, 
             "Change settings:",
-            "Markdown", 
+            "html", 
             formulateOptionsInlineKeyBoard(),
             message_id
             );
@@ -277,7 +287,7 @@ void handleNewMessages(int numNewMessages) {
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
           bInlineKeyboardExtraOptions=true;
-          bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "", formulateOptionsInlineKeyBoard());
+          bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "html", formulateOptionsInlineKeyBoard());
         }else if(text == "/restartESP") {
           numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
           ESP.restart();
@@ -299,6 +309,7 @@ void handleNewMessages(int numNewMessages) {
           welcome += "\t useDeepSleep | goto to deep sleep on MotionDetct and timeLapse\n";
           welcome += "\t useBuzzer    | trigger buzzer on motion detect\n";
           welcome += "\t webCaptureOn | enables and disbales the /capture.jpg url\n";
+          welcome += "\t OTAOn        | enables OTA through local Wifi \n";
   #if defined(IS_THERE_A_FLASH)
           welcome += "\t useFlash    | Flash is enabled\n";
   #endif

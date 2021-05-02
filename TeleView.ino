@@ -235,7 +235,7 @@ void setup() {
   bot.updateToken(configItems.botTTelegram);
   bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
   bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "", "Markdown", formulateKeyboardJson(), true);
-  if (configItems.alertALL){
+  if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
     bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "", "Markdown", formulateKeyboardJson(), true);
   }
   Serial.println("I am Alive!!");
@@ -273,7 +273,7 @@ void loop() {
     Serial.println("Motion Detected.");
     bot.sendMessage(configItems.adminChatIds, "Motion Detected!","" );
     String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
-    if (configItems.alertALL){
+    if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
       bot.sendMessage(configItems.userChatIds, "Motion Detected!","" );
       String result= sendCapturedImage2Telegram2(configItems.userChatIds);
     }
@@ -319,8 +319,8 @@ void loop() {
       Serial.println("Tick!");
       bot.sendMessage(configItems.adminChatIds, "Tick!","" );
       String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
-      if (configItems.alertALL){
-        bot.sendMessage(configItems.adminChatIds, "Tick!","" );
+      if (configItems.alertALL && configItems.userChatIds. toDouble()>0 ){
+        bot.sendMessage(configItems.userChatIds, "Tick!","" );
         String result= sendCapturedImage2Telegram2(configItems.userChatIds);
       }
       Serial.println("result: "+result);

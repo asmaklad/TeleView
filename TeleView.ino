@@ -57,7 +57,8 @@
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-#define CAMERA_MODEL_TTGO_T1_CAMERA      // Board definition "ESP32 WROVER Module" or "TTGO T1" 
+//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+#define CAMERA_MODEL_M5CAM                // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 //////////////////////////////////////
@@ -79,15 +80,17 @@ boolean applyConfigItem (config_item* ci);
 #endif
 
 #include "telegram_utils.h"
+#define uS_TO_S_FACTOR 1000000 
 
 bool bTakePhotoTick=false;
 boolean bMotionDetected=false;
+boolean bESPMayGoToSleep=false;
 Ticker tkTimeLapse;
 //****************************************************************//
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
-  Serial.begin(115200);  
-  Serial.setDebugOutput(true);
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);  
   esp_log_level_set("*", ESP_LOG_INFO);
   //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
   //esp_log_level_set("wifi", ESP_LOG_WARN);      // enable WARN logs from WiFi stack
@@ -99,6 +102,8 @@ void setup() {
   Serial.print("Compile Compiler:");
   Serial.println(compileCompiler);
   Serial.println();
+  //Print the wakeup reason for ESP32
+  print_wakeup_reason();
   //
   //ESP CAMERA
   camera_config_t config;
@@ -168,6 +173,7 @@ void setup() {
   acConfig.psk  = "tv-ei-694";
   acConfig.hostName=configItems.deviceName;  
   acConfig.autoRise=true;
+  acConfig.title = "TeleView";
   //AUTOCONNECT_USE_PREFERENCES
   acConfig.autoSave=AC_SAVECREDENTIAL_AUTO;
   //acConfig.portalTimeout = 60000;  // It will time out in 60 seconds
@@ -201,13 +207,13 @@ void setup() {
 //    }
   }else{
     Serial.println("Portal not startd");
-  }  
+  }
   Serial.println(WiFi.SSID());
   long rssi = WiFi.RSSI();
   Serial.print("RSSI:");
   Serial.println(rssi);
-  //  
-  byte mac[6];   
+  //
+  byte mac[6];
   WiFi.macAddress(mac);
   Serial.print("WiFi MAC: ");
   Serial.print(mac[5],HEX);
@@ -229,6 +235,9 @@ void setup() {
   bot.updateToken(configItems.botTTelegram);
   bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
   bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "", "Markdown", formulateKeyboardJson(), true);
+  if (configItems.alertALL){
+    bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "", "Markdown", formulateKeyboardJson(), true);
+  }
   Serial.println("I am Alive!!");
   ///////////////////
 #if defined(FLASH_LAMP_PIN)
@@ -264,6 +273,10 @@ void loop() {
     Serial.println("Motion Detected.");
     bot.sendMessage(configItems.adminChatIds, "Motion Detected!","" );
     String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+    if (configItems.alertALL){
+      bot.sendMessage(configItems.userChatIds, "Motion Detected!","" );
+      String result= sendCapturedImage2Telegram2(configItems.userChatIds);
+    }
     Serial.println("result: "+result);
     bMotionDetected=true;
     delay(100);
@@ -272,11 +285,13 @@ void loop() {
   }
 #endif
 #if defined(BUZZER_PIN)
-  if (bMotionDetected){
+  if (bMotionDetected && configItems.useBuzzer){
     // Active Buzzer
+    Serial.println("Buzzer ON");
     digitalWrite (BUZZER_PIN, BUZZER_PIN_ON); //turn buzzer on
     delay(1000);
   }else{
+    //Serial.println("Buzzer OFF");
     digitalWrite (BUZZER_PIN, !BUZZER_PIN_ON);  //turn buzzer off
   }
 #endif
@@ -301,15 +316,64 @@ void loop() {
       Serial.println("got response#3");
     }
     if (bTakePhotoTick){
-      Serial.println("Tick!"); 
-      bot.sendMessage(configItems.adminChatIds, "Tick!","" );    
-        
+      Serial.println("Tick!");
+      bot.sendMessage(configItems.adminChatIds, "Tick!","" );
       String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
-      
-      Serial.println("result: "+result);   
+      if (configItems.alertALL){
+        bot.sendMessage(configItems.adminChatIds, "Tick!","" );
+        String result= sendCapturedImage2Telegram2(configItems.userChatIds);
+      }
+      Serial.println("result: "+result);
       bTakePhotoTick=false;
     }
-    Bot_lasttime = millis(); 
+    Bot_lasttime = millis();
+    if (configItems.useDeepSleep && bESPMayGoToSleep){
+      Serial.flush();
+      bot.sendMessage(configItems.adminChatIds, "Going to sleep now!","" );
+      if (configItems.alertALL){
+        bot.sendMessage(configItems.adminChatIds, "Going to sleep now!","" );
+      }
+      Serial.println("Going to sleep now!");
+      esp_deep_sleep_start();
+    }
+    #if defined(PIR_PIN)
+      if (configItems.useDeepSleep && configItems.motDetectOn) {
+        bMotionDetected=true;
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)PIR_PIN,PIR_PIN_ON); //1 = High, 0 = Low
+        bESPMayGoToSleep=true;
+        Serial.println("ESP is going to sleep till PIR is active. " + String(configItems.lapseTime) + " minutes");
+        bot.sendMessage(configItems.adminChatIds, "ESP is going to sleep till PIR is active.","" );
+        if (configItems.alertALL){
+          bot.sendMessage(configItems.adminChatIds, "ESP is going to sleep till PIR is active. ","" );
+        }
+      }
+    #endif
+    if (configItems.useDeepSleep && configItems.lapseTime >0){
+      bTakePhotoTick=true;
+      esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+      bESPMayGoToSleep=true;
+      Serial.println("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes");
+      bot.sendMessage(configItems.adminChatIds, "ESP is going to sleep after the next tick for "+ String(configItems.lapseTime) + " minutes","" );
+      if (configItems.alertALL){
+        bot.sendMessage(configItems.adminChatIds, "ESP is going to sleep after the next tick for "+ String(configItems.lapseTime) + " minutes","" );
+      }
+    }
+  }
+}
+////////////////////////////////////////////////////////////////////////////
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
 }
 

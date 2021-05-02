@@ -2,33 +2,36 @@
 	A telegram-bot project to control an ESP32-Camera enabled board with many features.
 
 - [TeleView:](#teleview)
-	- [Main features and snapshots](#main-features-and-snapshots)
-	- [Generic Features:](#generic-features)
-	- [Specific Features per Type of Board:](#specific-features-per-type-of-board)
-	- [Tested Boards:](#tested-boards)
-	- [Required Installation:](#required-installation)
-	- [Required Libraries:](#required-libraries)
-	- [User Guide:](#user-guide)
-		- [Compile and Upload](#compile-and-upload)
-		- [Enabling Disabeling Features at compile time](#enabling-disabeling-features-at-compile-time)
-		- [Setting up the WiFi:](#setting-up-the-wifi)
-		- [Setting up the Telegrambot:](#setting-up-the-telegrambot)
-		- [Having more than one user to use the bot:](#having-more-than-one-user-to-use-the-bot)
-		- [Having multiple boards to use the same bot token:](#having-multiple-boards-to-use-the-same-bot-token)
-	- [The Telegram Keyboard](#the-telegram-keyboard)
-	- [The Configuration Web interface](#the-configuration-web-interface)
-		- [http://TeleView.local/](#httpteleviewlocal)
-		- [http://TeleView.local/_ac](#httpteleviewlocal_ac)
-		- [Intput Text](#intput-text)
-		- [CheckBoxes:](#checkboxes)
-		- [ComboBoxes:](#comboboxes)
-		- [Buttons:](#buttons)
+  - [Main features and snapshots](#main-features-and-snapshots)
+  - [Generic Features:](#generic-features)
+  - [Specific Features per Type of Board:](#specific-features-per-type-of-board)
+  - [Tested Boards:](#tested-boards)
+  - [Required Installation:](#required-installation)
+  - [Required Libraries:](#required-libraries)
+  - [User Guide:](#user-guide)
+    - [Compile and Upload](#compile-and-upload)
+    - [Enabling Disabeling Features at compile time](#enabling-disabeling-features-at-compile-time)
+    - [Setting up the WiFi:](#setting-up-the-wifi)
+    - [Setting up the Telegrambot:](#setting-up-the-telegrambot)
+    - [Having more than one user to use the bot:](#having-more-than-one-user-to-use-the-bot)
+    - [Having multiple boards to use the same bot token:](#having-multiple-boards-to-use-the-same-bot-token)
+  - [The Telegram Keyboard](#the-telegram-keyboard)
+  - [The Configuration Web interface](#the-configuration-web-interface)
+    - [http://TeleView.local/](#httpteleviewlocal)
+    - [http://TeleView.local/_ac](#httpteleviewlocal_ac)
+    - [Intput Text](#intput-text)
+    - [CheckBoxes:](#checkboxes)
+    - [ComboBoxes:](#comboboxes)
+    - [Buttons:](#buttons)
 ## Main features and snapshots
 * Send Photo through telegram upon request.
 <img src="./docs/Photo_sendPhoto.jpg" alt="/sendPhoto" width="40%"/>
 
 * Control camera options through Telegram Keyboard
-<img src="./docs/photo_telegram_menu.jpg" alt="/options" width="40%"/>
+<img src="./docs/extra_options.jpg" alt="/options" width="40%"/>
+
+* Control camera resolution Inline keyboard:
+<img src="./docs/changeRes.jpg" alt="/options" width="40%"/>
 
 * View options through Telegram 
 <img src="./docs/photo_sendOptions.jpg" alt="/options" width="40%"/>
@@ -51,19 +54,25 @@
 * Web Server for /capture.jpg to make photo available through web. (configurable through Telegram menue)
 * The Device-Name (configurable) decides the hostname of the device on LAN/WiFi 
 * Time Lapse feature every X min, chose 0 to disable Time-Lapse.
+* A deep sleep mode is possible with time-lapse and PIR motiion detection for battery operated scenarios.
+* Usual case , only the admin will be notified of the eventd "Alive", "motion detection" and "time-lapse" , but you can also enable alerting of the userId.
+* Supports multiple Admins and multiple Users through Telegram Groups (explained further below).
 
 ## Specific Features per Type of Board:
-* /useFlash : For the AI_Thinker board, there is a very strong led on the same side as camera, which could be used as a flash. 
+* toggle flash when taking a photo : For the AI_Thinker board, there is a very strong led on the same side as camera, which could be used as a flash.
 This feature Will only be compiled in the sketch if the "#define CAMERA_MODEL_AI_THINKER"  is chosen upon compile.
 
-* /motDetectOn : For the TTGO_TI board, there is a motion sensor , which could trigger a "sendPhoto". This will only be available when the sketch is compiled with "#define CAMERA_MODEL_TTGO_T1_CAMERA".
+* PIR motion detection : For the TTGO_TI board, there is a motion sensor , which could trigger a "sendPhoto". This will only be available when the sketch is compiled with "#define CAMERA_MODEL_TTGO_T1_CAMERA".
 
-* /screenOn : For the TTGO_TI board, there is a SSD1306 OLED display, which could display AutoConnect - AP , IP when connected and used as a weak-flash when taking a photo.
+* toggle Display : For the TTGO_TI board, there is a SSD1306 OLED display, which could display AutoConnect - AP , IP when connected and used as a weak-flash when taking a photo.
 This will only be available when the sketch is compiled with "#define CAMERA_MODEL_TTGO_T1_CAMERA". also you could flip the screen upside-down.
+
+* Save photos to SD as a configurable feature.
 
 ## Tested Boards:
 * AI-Thinker ESP32-CAM Board
 * TTGO T1 Board
+* M5 CAM
 
 ## Required Installation:
 * Arduino IDE
@@ -71,7 +80,7 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 
 ## Required Libraries:
 
-* TeleView was tested with these versions of the libraries. just use the latest and if you face problems, then downgrade to those versions
+* TeleView was tested/compiled with these versions of the libraries. just use the latest and if you face problems, then downgrade to those versions
 
 Library | Version
 --------| ---------
@@ -239,7 +248,6 @@ Buttons | Description
 OK 					|	Submit and Save the configuration.
 Delete Everything	| 	Deletes all configuration data. except Wifi credentials.
 Cancel				| 	Go back to AutoConnect Portal without saving.
-
 
 
 

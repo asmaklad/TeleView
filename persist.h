@@ -248,7 +248,6 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("webCaptureOn",ci->webCaptureOn); bDirty=true; }
     if (prefs.getInt("lapseTime")!=ci->lapseTime)
       { prefs.putInt("lapseTime",ci->lapseTime); bDirty=true; }
-      
     ///////////////////////////////
     if (!prefs.getString("deviceName").equals(ci->deviceName)){
       prefs.putString("deviceName",ci->deviceName);
@@ -329,15 +328,15 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
-  result += prefix+"motionDetectVC            "+sep+"";
+  result += prefix+"motionDetectVC   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
-  result += prefix+"alertALL            "+sep+"";
+  result += prefix+"alertALL         "+sep+"";
   result += (ci->alertALL ? String("true") : String("false"))  + suffix;
-  result += prefix+"saveToSD            "+sep+"";
+  result += prefix+"saveToSD         "+sep+"";
   result += (ci->saveToSD ? String("true") : String("false"))  + suffix;
-  result += prefix+"useDeepSleep            "+sep+"";
+  result += prefix+"useDeepSleep     "+sep+"";
   result += (ci->useDeepSleep ? String("true") : String("false"))  + suffix;
-  result += prefix+"useBuzzer            "+sep+"";
+  result += prefix+"useBuzzer        "+sep+"";
   result += (ci->useBuzzer ? String("true") : String("false"))  + suffix;
   result += prefix+"webCaptureOn     "+sep+"";
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;

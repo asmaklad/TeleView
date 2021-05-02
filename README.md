@@ -37,7 +37,7 @@
 <img src="./docs/photo_sendOptions.jpg" alt="/options" width="40%"/>
 
 * Web interface
-<img src="./docs/photo_web_interface.png" alt="Web Interface" width="40%"/>
+<img src="./docs/WebUI.jpg" alt="Web Interface" width="40%"/>
 
 
 ## Generic Features: 

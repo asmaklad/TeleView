@@ -7,6 +7,11 @@
 #include "persist.h"
 #include "webPages.h"
 
+#if defined(SD_CARD_ON)
+#include "FS.h"                // SD Card ESP32
+#include "SD_MMC.h"            // SD Card ESP32
+#endif
+
 ////////////////////////////////////////////////
 WiFiClientSecure botClient;
 UniversalTelegramBot bot("",botClient);
@@ -119,17 +124,45 @@ String formulateOptionsInlineKeyBoard(){
     keyboardJson += "\", \"callback_data\" : \"/motDetectOn\" }],";
   #endif
 
-  keyboardJson += "[{ \"text\" : \"Camera Flip is ";
+  keyboardJson += "[{ \"text\" : \"Camera Flip is:";
   keyboardJson += (configItems.vFlip?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/vFlip\" }],";
 
-  keyboardJson += "[{ \"text\" : \"Camera Mirror is ";
+  keyboardJson += R"([{ "text" : "VC MotionDetect:)";
+  keyboardJson += (configItems.motionDetectVC?"ON\u2705":"OFF\u274C");
+  keyboardJson += R"(", "callback_data" : "/motionDetectVC" }],)";
+
+  keyboardJson += R"([{ "text" : "Alert all:)";
+  keyboardJson += (configItems.alertALL?"ON\u2705":"OFF\u274C");
+  keyboardJson += R"(", "callback_data" : "/alertALL" }],)";
+
+  #if defined(SD_CARD_ON)
+    keyboardJson += R"([{ "text" : "Save Photos to SD also:)";
+    keyboardJson += (configItems.saveToSD?"ON\u2705":"OFF\u274C");
+    keyboardJson += R"(", "callback_data" : "/saveToSD" }],)";
+  #endif
+
+  keyboardJson += R"([{ "text" : "Enable deep sleep:)";
+  keyboardJson += (configItems.useDeepSleep?"ON\u2705":"OFF\u274C");
+  keyboardJson += R"(", "callback_data" : "/useDeepSleep" }],)";
+
+  #if defined(BUZZER_PIN)
+    keyboardJson += R"([{ "text" : "trigger buzzer on motion detect:)";
+    keyboardJson += (configItems.useBuzzer?"ON\u2705":"OFF\u274C");
+    keyboardJson += R"(", "callback_data" : "/useBuzzer" }],)";
+  #endif
+
+  keyboardJson += "[{ \"text\" : \"Camera Mirror is:";
   keyboardJson += (configItems.hMirror?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/hMirror\" }],";
 
-  keyboardJson += "[{ \"text\" : \"Web Capture is ";
-  keyboardJson += (configItems.webCaptureOn?"ON\u2705":"OFF\274C");
-  keyboardJson += "\", \"callback_data\" : \"/webCaptureOn\" }]";
+  keyboardJson += "[{ \"text\" : \"Web Capture is:";
+  keyboardJson += (configItems.webCaptureOn?"ON\u2705":"OFF\u274C");
+  keyboardJson += "\", \"callback_data\" : \"/webCaptureOn\" }],";
+
+  keyboardJson += "[{ \"text\" : \"OTA is:";
+  keyboardJson += (acConfig.ota==AC_OTA_BUILTIN?"ON\u2705":"OFF\u274C");
+  keyboardJson += "\", \"callback_data\" : \"/OTAOn\" }]";
 
   keyboardJson += "]";
 
@@ -175,6 +208,16 @@ void handleNewMessages(int numNewMessages) {
             configItems.hMirror = !configItems.hMirror;
           }else if (text == "/vFlip") {
             configItems.vFlip = !configItems.vFlip;
+          }else if (text == "/motionDetectVC") {
+            configItems.motionDetectVC = !configItems.motionDetectVC;
+          }else if (text == "/alertALL") {
+            configItems.alertALL = !configItems.alertALL;
+          }else if (text == "/saveToSD") {
+            configItems.saveToSD = !configItems.saveToSD;
+          }else if (text == "/useDeepSleep") {
+            configItems.useDeepSleep = !configItems.useDeepSleep;
+          }else if (text == "/useBuzzer") {
+            configItems.useBuzzer = !configItems.useBuzzer;
           }else if (text == "/useFlash") {
             configItems.useFlash = !configItems.useFlash;
           }else if (text == "/screenFlip") {
@@ -185,10 +228,16 @@ void handleNewMessages(int numNewMessages) {
             configItems.motDetectOn = !configItems.motDetectOn;
           }else if (text == "/webCaptureOn") {
             configItems.webCaptureOn = !configItems.webCaptureOn;
+          }else if (text == "/OTAOn") {
+            if (acConfig.ota==AC_OTA_BUILTIN )
+              acConfig.ota=AC_OTA_EXTRA;
+            else
+              acConfig.ota=AC_OTA_BUILTIN;
+            Portal.config(acConfig);
           }
           bot.sendMessageWithInlineKeyboard(chat_id, 
             "Change settings:",
-            "Markdown", 
+            "html", 
             formulateOptionsInlineKeyBoard(),
             message_id
             );
@@ -230,6 +279,7 @@ void handleNewMessages(int numNewMessages) {
           bInlineKeyboardResolution=true;
           bot.sendMessageWithInlineKeyboard(chat_id, "Select the resolution", "", formulateResolutionInlineKeyBoard());
         }else if(text == "/setlapse") {
+          configItems.lapseTime=0;
           bot.sendMessage(chat_id, "Please insert Lapse Time in minutes:", "");
           bSetLapseMode=true;
           bPrintOptions=false;
@@ -237,7 +287,7 @@ void handleNewMessages(int numNewMessages) {
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
           bInlineKeyboardExtraOptions=true;
-          bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "", formulateOptionsInlineKeyBoard());
+          bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "html", formulateOptionsInlineKeyBoard());
         }else if(text == "/restartESP") {
           numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
           ESP.restart();
@@ -251,9 +301,15 @@ void handleNewMessages(int numNewMessages) {
           welcome += "/sendPhoto   | Send a Photo from the camera\n";
           welcome += "/changeRes   | Change the resoltion of the camera\n";
           welcome += "/moreSettings| Access more settings\n";
-          welcome += "\t hMirror     | Camera horizontal MIRROR\n";
-          welcome += "\t vFlip       | Camera vertical FLIP\n";
-          welcome += "\t webCaptureOn| enables and disbales the /capture.jpg url\n";
+          welcome += "\t hMirror      | Camera horizontal MIRROR\n";
+          welcome += "\t vFlip        | Camera vertical FLIP\n";
+          welcome += "\t motionDetectVC | MotionDetect by Vision not PIR -no DeepSleep\n";
+          welcome += "\t alertALL     | MotionDetect/timelapse to all chatIds not just Admin\n";
+          welcome += "\t saveToSD     | Save Photos to SD also\n";
+          welcome += "\t useDeepSleep | goto to deep sleep on MotionDetct and timeLapse\n";
+          welcome += "\t useBuzzer    | trigger buzzer on motion detect\n";
+          welcome += "\t webCaptureOn | enables and disbales the /capture.jpg url\n";
+          welcome += "\t OTAOn        | enables OTA through local Wifi \n";
   #if defined(IS_THERE_A_FLASH)
           welcome += "\t useFlash    | Flash is enabled\n";
   #endif
@@ -299,6 +355,7 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
 
+  String result="success";
   camera_fb_t * fb = NULL;
 
 #if defined(FLASH_LAMP_PIN)
@@ -357,7 +414,7 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
   head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"parse_mode\"; \r\n\r\nMarkdown\r\n";
   head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\n";
   //"Content-Type: image/jpeg\r\n\r\n"+
-  
+
   String tail = "\r\n--ef2ac69f9149220e889abc22b81d1401--\r\n";
 
   uint32_t imageLen = fb->len;
@@ -398,11 +455,11 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
   }
   Serial.println("/");
   botClient.print(tail);
-  
+
   Serial.print ("sendCapturedImage2Telegram2:sentB:");
   Serial.println (sentB);
   Serial.println (String(fb_width)+"x"+String(fb_height));
-  
+
   int waitTime = 10000;   // timeout 10 seconds
   long startTime = millis();
   boolean state = false;
@@ -439,6 +496,44 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
   Serial.println();
   PICTURES_COUNT++;
   botClient.stop();
+
+  #if defined(SD_CARD_ON)
+    if (configItems.saveToSD) {
+      Serial.println("Saving to SD Card.");
+      if(!SD_MMC.begin()){
+        Serial.println("SD Card Mount Failed");
+        result="SD Card Mount Failed";
+      }else{
+        uint8_t cardType = SD_MMC.cardType();
+        if(cardType == CARD_NONE){
+          Serial.println("No SD Card attached");
+          result="No SD Card attached";
+        }else{
+          struct tm *tm;
+          time_t  t;
+          char    dateTime[100];
+          t = time(NULL);
+          tm = localtime(&t);
+          
+          sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d\0",
+            tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
+            tm->tm_hour, tm->tm_min, tm->tm_sec);
+          // Path where new picture will be saved in SD Card
+          String path = "/picture" + String(dateTime) +".jpg";
+          fs::FS &fs = SD_MMC;
+          Serial.printf("Picture file name: %s\n", path.c_str());
+          File file = fs.open(path.c_str(), FILE_WRITE);
+          if(!file){
+            Serial.println("Failed to open file in writing mode");
+          } else {
+            file.write(fb->buf, fb->len); // payload (image), payload length
+            Serial.printf("Saved file to path: %s\n", path.c_str());
+          }
+          file.close();
+        }
+      }
+    }
+  #endif
   esp_camera_fb_return(fb);
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
@@ -451,8 +546,8 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
 #if defined(USE_OLED_AS_FLASH)
   display_Clear();
 #endif
-  bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB","" );
-  return("success");
+  bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB:"+result,"" );
+  return(result);
 }
 
 

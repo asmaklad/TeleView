@@ -83,6 +83,11 @@ struct config_item {
   framesize_t frameSize;
   boolean hMirror;
   boolean vFlip;
+  boolean motionDetectVC;
+  boolean alertALL;
+  boolean saveToSD;
+  boolean useDeepSleep;
+  boolean useBuzzer;
   boolean screenFlip;
   boolean screenOn;
   boolean motDetectOn;
@@ -94,16 +99,10 @@ struct config_item {
   String timeZone;
   boolean webCaptureOn;
   // TODO
-  /* 
-   *  useDeepSleep : ON/OFF uses Deep sleep whenever MotionDetect or TimeLapse is enabled
-   *    Usefull when battery operated.
-   *  buzzer : ON/OFF  on motion Detect.
-   *  jpeg_Qualtiy: value 
-   *  WhiteBalance: value 
-   *  Brightness: value 
-   *  save to SD: ON/OFF whenever SD available 
-   *  Alert all : ON/OFF for MotionDetect/timelapse to all chatId's not just Admin
-   *    user_chat_id : can's issue commands to the bot.
+  /*
+   *  jpeg_Qualtiy: value
+   *  WhiteBalance: value
+   *  Brightness: value
    *  /sendVideo ?
    *  /sendAudio ?
    *  motion detect by Image not PIR  ON/OFF
@@ -120,6 +119,11 @@ struct config_item {
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
+  .motionDetectVC = false,
+  .alertALL = false,
+  .saveToSD = true,
+  .useDeepSleep = false,
+  .useBuzzer = true,
   .screenFlip = true,
   .screenOn=true,
   .motDetectOn=true,
@@ -150,6 +154,11 @@ void deleteConfiguration(){
     prefs.remove("frameSize");
     prefs.remove("hMirror");
     prefs.remove("vFlip");
+    prefs.remove("motionDetectVC");
+    prefs.remove("alertALL");
+    prefs.remove("saveToSD");
+    prefs.remove("useDeepSleep");
+    prefs.remove("useBuzzer");
     prefs.remove("screenFlip");
     prefs.remove("screenFlip");
     prefs.remove("screenOn");
@@ -180,6 +189,11 @@ config_item loadConfiguration() {
     ci.frameSize = (framesize_t) prefs.getUInt("frameSize",configItems.frameSize);
     ci.hMirror = prefs.getBool("hMirror",configItems.hMirror);
     ci.vFlip = prefs.getBool("vFlip",configItems.vFlip);
+    ci.motionDetectVC = prefs.getBool("motionDetectVC",configItems.motionDetectVC);
+    ci.alertALL = prefs.getBool("alertALL",configItems.alertALL);
+    ci.saveToSD = prefs.getBool("saveToSD",configItems.saveToSD);
+    ci.useDeepSleep = prefs.getBool("useDeepSleep",configItems.useDeepSleep);
+    ci.useBuzzer = prefs.getBool("useBuzzer",configItems.useBuzzer);
     ci.screenFlip = prefs.getBool("screenFlip",configItems.screenFlip);
     ci.screenFlip = prefs.getBool("screenFlip",configItems.screenFlip);
     ci.screenOn = prefs.getBool("screenOn",configItems.screenOn);
@@ -214,6 +228,16 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("hMirror",ci->hMirror); bDirty=true; }
     if (prefs.getBool("vFlip")!=ci->vFlip)
       { prefs.putBool("vFlip",ci->vFlip); bDirty=true; }
+    if (prefs.getBool("motionDetectVC")!=ci->motionDetectVC)
+      { prefs.putBool("motionDetectVC",ci->motionDetectVC); bDirty=true; }
+    if (prefs.getBool("alertALL")!=ci->alertALL)
+      { prefs.putBool("alertALL",ci->alertALL); bDirty=true; }
+    if (prefs.getBool("saveToSD")!=ci->saveToSD)
+      { prefs.putBool("saveToSD",ci->saveToSD); bDirty=true; }
+    if (prefs.getBool("useDeepSleep")!=ci->useDeepSleep)
+      { prefs.putBool("useDeepSleep",ci->useDeepSleep); bDirty=true; }
+    if (prefs.getBool("useBuzzer")!=ci->useBuzzer)
+      { prefs.putBool("useBuzzer",ci->useBuzzer); bDirty=true; }
     if (prefs.getBool("screenFlip")!=ci->screenFlip)
       { prefs.putBool("screenFlip",ci->screenFlip); bDirty=true; }
     if (prefs.getBool("screenOn")!=ci->screenOn)
@@ -224,7 +248,6 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("webCaptureOn",ci->webCaptureOn); bDirty=true; }
     if (prefs.getInt("lapseTime")!=ci->lapseTime)
       { prefs.putInt("lapseTime",ci->lapseTime); bDirty=true; }
-      
     ///////////////////////////////
     if (!prefs.getString("deviceName").equals(ci->deviceName)){
       prefs.putString("deviceName",ci->deviceName);
@@ -287,6 +310,19 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Chip Cores       "+sep+"";
   result += ESP.getChipCores()  +suffix;
   //////////////////////////////////////////////
+  struct tm *tm;
+  time_t  t;
+  char    dateTime[100];
+  t = time(NULL);
+  tm = localtime(&t);
+
+  sprintf(dateTime, "%04d-%02d-%02d %02d:%02d:%02d\0",
+    tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday,
+    tm->tm_hour, tm->tm_min, tm->tm_sec);
+    
+  result += prefix+"Current Time     "+sep+"";  
+  result += String(dateTime)  +suffix;
+  //////////////////////////////////////////////
 #if defined(IS_THERE_A_FLASH)
   result += prefix+"useFlash         "+sep+"";
   result += (ci->useFlash ? String("true") : String("false")) +suffix;
@@ -305,6 +341,16 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
+  result += prefix+"motionDetectVC   "+sep+"";
+  result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
+  result += prefix+"alertALL         "+sep+"";
+  result += (ci->alertALL ? String("true") : String("false"))  + suffix;
+  result += prefix+"saveToSD         "+sep+"";
+  result += (ci->saveToSD ? String("true") : String("false"))  + suffix;
+  result += prefix+"useDeepSleep     "+sep+"";
+  result += (ci->useDeepSleep ? String("true") : String("false"))  + suffix;
+  result += prefix+"useBuzzer        "+sep+"";
+  result += (ci->useBuzzer ? String("true") : String("false"))  + suffix;
   result += prefix+"webCaptureOn     "+sep+"";
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
   result += prefix+"frameSize        "+sep+"";
@@ -324,9 +370,11 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += String(ci->lapseTime)+suffix;
   result += prefix+"timeZone         "+sep+"";
   result += ci->timeZone+suffix;
+  /*
   struct tm *tm;
   time_t  t;
   char    dateTime[100];
+  */
   result += prefix+"Last Photo taken "+sep+"";
   if (timeOfLastPhoto>0){
     t = time(NULL)-timeOfLastPhoto;

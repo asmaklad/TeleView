@@ -12,6 +12,7 @@ AutoConnect Portal(Server);
 AutoConnectConfig acConfig;
 AutoConnectAux auxPageConfig;
 ///////////////////////////////////////////////////////////
+
 void populateResolutionsSelects(AutoConnectAux& aux){
   //aux.fetchElement();
   AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
@@ -83,7 +84,7 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 #endif
 #ifndef IS_THERE_A_FLASH
   aux["XuseFlash"].as<AutoConnectCheckbox>().enable=false;
-#endif    
+#endif
   if (Portal.where().equals("/teleView")){
     if (args.hasArg("bxToken"))
       configItems.botTTelegram=args.arg("bxToken");
@@ -104,9 +105,14 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     configItems.hMirror=(args.hasArg("XhMirror")?true:false);
     configItems.useFlash=(args.hasArg("XuseFlash")?true:false);
     configItems.vFlip=(args.hasArg("XvFlip")?true:false);
+    configItems.motionDetectVC=(args.hasArg("XmotionDetectVC")?true:false);
+    configItems.alertALL=(args.hasArg("XalertALL")?true:false);
+    configItems.saveToSD=(args.hasArg("XsaveToSD")?true:false);
+    configItems.useDeepSleep=(args.hasArg("XuseDeepSleep")?true:false);
+    configItems.useBuzzer=(args.hasArg("XuseBuzzer")?true:false);
     configItems.screenFlip=(args.hasArg("XscreenFlip")?true:false);
     configItems.screenOn=(args.hasArg("XscreenOn")?true:false);
-    configItems.motDetectOn=(args.hasArg("XmotDetectOn")?true:false);    
+    configItems.motDetectOn=(args.hasArg("XmotDetectOn")?true:false);
     applyConfigItem(&configItems);
     saveConfiguration(&configItems);
   }else{
@@ -116,15 +122,19 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     aux["XTelegramUserChatId"].as<AutoConnectInput>().value=configItems.userChatIds;
     aux["XdeviceName"].as<AutoConnectInput>().value=configItems.deviceName;
     aux["XlapseTime"].as<AutoConnectInput>().value=configItems.lapseTime;
-    
     aux["XuseFlash"].as<AutoConnectCheckbox>().checked=configItems.useFlash;
     aux["XhMirror"].as<AutoConnectCheckbox>().checked=configItems.hMirror;
     aux["XvFlip"].as<AutoConnectCheckbox>().checked=configItems.vFlip;
+    aux["XmotionDetectVC"].as<AutoConnectCheckbox>().checked=configItems.motionDetectVC;
+    aux["XalertALL"].as<AutoConnectCheckbox>().checked=configItems.alertALL;
+    aux["XsaveToSD"].as<AutoConnectCheckbox>().checked=configItems.saveToSD;
+    aux["XuseDeepSleep"].as<AutoConnectCheckbox>().checked=configItems.useDeepSleep;
+    aux["XuseBuzzer"].as<AutoConnectCheckbox>().checked=configItems.useBuzzer;
     aux["XscreenFlip"].as<AutoConnectCheckbox>().checked=configItems.screenFlip;
     aux["XscreenOn"].as<AutoConnectCheckbox>().checked=configItems.screenOn;
     aux["XmotDetectOn"].as<AutoConnectCheckbox>().checked=configItems.motDetectOn;
     aux["XframeSize"].as<AutoConnectSelect>().select (
-        String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1]) 
+        String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1])
     );
     Serial.println("XframeSize_select:"+String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1]));
   }
@@ -204,15 +214,12 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "checked": false,
       "global": true
     },
-    {
-      "name": "XvFlip",
-      "type": "ACCheckbox",
-      "value": "",
-      "labelPosition": "AC_Infront" ,
-      "label": "Vertical Flip",
-      "checked": false,
-      "global": true
-    },
+    { "name": "XvFlip","type": "ACCheckbox","value": "","labelPosition": "AC_Infront" ,"label": "Vertical Flip","checked": false,"global": true},
+    { "name": "XmotionDetectVC", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect by Vision not PIR -no DeepSleep", "checked": false, "global": true },
+    { "name": "XalertALL", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect/timelapse to all chatIds not just Admin", "checked": false, "global": true },
+    { "name": "XsaveToSD", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Save Photos to SD also", "checked": false, "global": true },
+    { "name": "XuseDeepSleep", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "goto to deep sleep on MotionDetct and timeLapse", "checked": false, "global": true },
+    { "name": "XuseBuzzer", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "trigger buzzer on motion detect", "checked": false, "global": true },
     {
       "name": "XscreenFlip",
       "type": "ACCheckbox",
@@ -288,10 +295,10 @@ void rootPage() {
     "   </script>"
     " </head>"
     " <body>"
-    "   <h2 align=\"center\" style=\"color:blue;margin:20px;\">Device Name: {{DEVICE_NAME}}</h2>"    
-    "   <h3 align=\"center\" style=\"color:gray;margin:10px;\">Uptime: {{DateTime}}</h3>"    
+    "   <h2 align=\"center\" style=\"color:blue;margin:20px;\">Device Name: {{DEVICE_NAME}}</h2>"
+    "   <h3 align=\"center\" style=\"color:gray;margin:10px;\">Uptime: {{DateTime}}</h3>"
     "   <h3 align=\"center\" style=\"color:gray;margin:10px;\">Pictures Taken: {{PICTURES_COUNT}}</h3>"
-    "       <h3 align=\"center\" style=\"color:gray;margin:10px;\">"    
+    "       <h3 align=\"center\" style=\"color:gray;margin:10px;\">"
     "           compiled: {{COMPILE_TIME}} <br/>"
     "           <a href=\"/capture\">Have a look!</a> "
     "       </h3>"
@@ -300,17 +307,17 @@ void rootPage() {
     "       <h3 align=\"center\" style=\"color:gray;margin:10px;\">"
     "         <br/><img src=\"/capture.jpg\"/><br/>"
     "       </h3>"
-    //"   </iframe>"        
-    "   <p style=\"text-align:center;\">Reload the page to update the capture.</p>"    
+    //"   </iframe>"
+    "   <p style=\"text-align:center;\">Reload the page to update the capture.</p>"
     " </body>"
     "</html>";
-  
+
   struct tm *tm;
   time_t  t;
   char    dateTime[100];
   t = time(NULL);
   tm = localtime(&t);
-  
+
   sprintf(dateTime, "%02d Years -%02d Months -%02d Days  %02d Hrs :%02d Min :%02d Sec\0",
     tm->tm_year + 1900-1970, tm->tm_mon , tm->tm_mday-1,
     tm->tm_hour, tm->tm_min, tm->tm_sec);
@@ -323,12 +330,12 @@ void rootPage() {
   content.replace("{{COMPILE_TIME}}",compileDate+" "+compileTime+","+compileCompiler);
   content.replace("{{DEVICE_NAME}}",configItems.deviceName);
   content.replace("{{PICTURES_COUNT}}",String(PICTURES_COUNT));
-  
+
   Server.send(200,"text/html",content);
 }
 ///////////////////////////////////////////////////////////
 void deletePage() {
-  deleteConfiguration();  
+  deleteConfiguration();
   Server.sendHeader("Location","/");
   Server.send(303);
   //

@@ -25,7 +25,7 @@
     - [ComboBoxes:](#comboboxes)
     - [Buttons:](#buttons)
 ## Main features and snapshots
-* Send Photo through telegram upon request.
+* Send Photo through telegram upon request. 
 <img src="./docs/Photo_sendPhoto.jpg" alt="/sendPhoto" width="40%"/>
 
 * Control camera options through Telegram Keyboard

@@ -69,7 +69,7 @@ This feature Will only be compiled in the sketch if the "#define CAMERA_MODEL_AI
 * toggle Display : For the TTGO_TI board, there is a SSD1306 OLED display, which could display AutoConnect - AP , IP when connected and used as a weak-flash when taking a photo.
 This will only be available when the sketch is compiled with "#define CAMERA_MODEL_TTGO_T1_CAMERA". also you could flip the screen upside-down.
 
-* Save photos to SD as a configurable feature.
+* Save photos to SD as a configurable feature. file name by date-time.
 
 ## Tested Boards:
 * AI-Thinker ESP32-CAM Board
@@ -160,7 +160,7 @@ This could be acquired through a visit to the @chatid_echo_bot Telegrambot https
 * Add the Bot to your telegram contacts.
 * Reset your board and you should get an "I am Alive!" messgae from your bot.
 
-### OTA 
+### OTA (it is there but doesnt work with all boards)
 * Through the Autoconnect Library, Teleview supports OTA.
 * by default OTA is disabled. You can trigger it from Telegram , but you can upload the new firmware from the webUI.
 * To enable OTA, use telegram's /moreSettings button and from the inlinekeyboard, "Enable OTA".
@@ -250,7 +250,7 @@ Motion Detection Enabled		|	Enable/Disable the Motion Detection Feature.
 ### ComboBoxes:
 ComboBoxes | Description
 :--------| :------------
-Select TZ name 		|	Select the Time Zone region (currently unused)
+Select TZ name 		|	Select the Time Zone region (currently used for naming files stored on SD card)
 Select Resolution 	|	Select the Camera Resolution. (never use the QXGA)
 
 ### Buttons:

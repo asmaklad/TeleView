@@ -27,14 +27,6 @@
  *    ArduinoJson - V5.13.5
  *    Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 */
-
-/*
- * TODO:
- *  -   TimeZone NTP API.
- *  -   Add Google Geolocation API through Wifi.
- *  -   Use clock & location in Something useful such as taking photos only between sunrise and sunset option.
- */
-
 //****************************************************************//
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -57,8 +49,8 @@
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
-#define CAMERA_MODEL_M5CAM                // Board Difinition  "AI Thinker ESP32-CAM"
+#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 //////////////////////////////////////
@@ -81,6 +73,16 @@ boolean applyConfigItem (config_item* ci);
 
 #include "telegram_utils.h"
 #define uS_TO_S_FACTOR 1000000 
+
+/*
+#if defined(SD_CARD_ON)
+#include "FSBRowser.h"
+#endif
+*/
+
+char* ntpServer = "pool.ntp.org";
+long  gmtOffset_sec = 3600;
+int   daylightOffset_sec = 3600;
 
 bool bTakePhotoTick=false;
 boolean bMotionDetected=false;
@@ -160,6 +162,11 @@ void setup() {
   display_init();  
 #endif
   ////////////////////////////
+  /*
+#if defined(SD_CARD_ON)
+  setupFSBrowser();
+#endif
+*/
   Portal.host().on("/",rootPage);
   Portal.host().on("/delete",deletePage);
   Portal.host().on("/capture",capturePage);
@@ -197,17 +204,18 @@ void setup() {
       }
   }
   // Add service to MDNS-SD
+  // With applying AutoConnect, the MDNS service must be started after
+  // establishing a WiFi connection.  
   MDNS.addService("http", "tcp", 80);
   Serial.println("mDNS responder started");
   /////////////////////////////
   if (Portal.begin()) {
     Serial.println("WiFi connected: " + WiFi.localIP().toString());
-//    if (ESPmDNS.begin(configItems.deviceName)) {
-//      ESPmDNS.addService("http", "tcp", 80);
-//    }
   }else{
     Serial.println("Portal not startd");
   }
+  Serial.println("HTTP server started");
+
   Serial.println(WiFi.SSID());
   long rssi = WiFi.RSSI();
   Serial.print("RSSI:");
@@ -230,13 +238,29 @@ void setup() {
   //
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  // NTP //////////////////////////////
+  //init and get the time
+  for (int i=0;i<=23;i++) {
+    Timezone_t tempTz = TZ [i];
+    //if (strcmp(tempTz.zone,configItems.timeZone.c_str())==0){
+    if (configItems.timeZone.equals(tempTz.zone) ){
+      //configItems.timeZone=tempTz.zone;
+      ntpServer=(char*)tempTz.ntpServer;
+      gmtOffset_sec=tempTz.tzoff*60*60;
+      break;
+    }
+  }
+  daylightOffset_sec=0;
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  printLocalTime();
+  ///////////////////////////////////
   botClient.setInsecure();
   //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.updateToken(configItems.botTTelegram);
-  bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
-  bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "", "Markdown", formulateKeyboardJson(), true);
+  //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
+  bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
   if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-    bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "", "Markdown", formulateKeyboardJson(), true);
+    bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
   }
   Serial.println("I am Alive!!");
   ///////////////////
@@ -256,8 +280,6 @@ void setup() {
 #endif
   bTelegramBotInitiated=true;
 }
-
-
 //****************************************************************//
 //**********************   The LOOP   ****************************//
 //****************************************************************//
@@ -359,6 +381,17 @@ void loop() {
       }
     }
   }
+}
+//****************************************************************//
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.print("Current Time:");
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 ////////////////////////////////////////////////////////////////////////////
 void print_wakeup_reason(){

@@ -119,10 +119,10 @@ struct config_item {
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
-  .motionDetectVC = true,
-  .alertALL = true,
+  .motionDetectVC = false,
+  .alertALL = false,
   .saveToSD = true,
-  .useDeepSleep = true,
+  .useDeepSleep = false,
   .useBuzzer = true,
   .screenFlip = true,
   .screenOn=true,
@@ -310,6 +310,19 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Chip Cores       "+sep+"";
   result += ESP.getChipCores()  +suffix;
   //////////////////////////////////////////////
+  struct tm *tm;
+  time_t  t;
+  char    dateTime[100];
+  t = time(NULL);
+  tm = localtime(&t);
+
+  sprintf(dateTime, "%04d-%02d-%02d %02d:%02d:%02d\0",
+    tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday,
+    tm->tm_hour, tm->tm_min, tm->tm_sec);
+    
+  result += prefix+"Current Time     "+sep+"";  
+  result += String(dateTime)  +suffix;
+  //////////////////////////////////////////////
 #if defined(IS_THERE_A_FLASH)
   result += prefix+"useFlash         "+sep+"";
   result += (ci->useFlash ? String("true") : String("false")) +suffix;
@@ -357,9 +370,11 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += String(ci->lapseTime)+suffix;
   result += prefix+"timeZone         "+sep+"";
   result += ci->timeZone+suffix;
+  /*
   struct tm *tm;
   time_t  t;
   char    dateTime[100];
+  */
   result += prefix+"Last Photo taken "+sep+"";
   if (timeOfLastPhoto>0){
     t = time(NULL)-timeOfLastPhoto;

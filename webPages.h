@@ -12,6 +12,7 @@ AutoConnect Portal(Server);
 AutoConnectConfig acConfig;
 AutoConnectAux auxPageConfig;
 ///////////////////////////////////////////////////////////
+
 void populateResolutionsSelects(AutoConnectAux& aux){
   //aux.fetchElement();
   AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();

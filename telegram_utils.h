@@ -509,9 +509,17 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
           Serial.println("No SD Card attached");
           result="No SD Card attached";
         }else{
-          uint16_t pictureNumber = message_id;
+          struct tm *tm;
+          time_t  t;
+          char    dateTime[100];
+          t = time(NULL);
+          tm = localtime(&t);
+          
+          sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d\0",
+            tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
+            tm->tm_hour, tm->tm_min, tm->tm_sec);
           // Path where new picture will be saved in SD Card
-          String path = "/picture" + String(pictureNumber) +".jpg";
+          String path = "/picture" + String(dateTime) +".jpg";
           fs::FS &fs = SD_MMC;
           Serial.printf("Picture file name: %s\n", path.c_str());
           File file = fs.open(path.c_str(), FILE_WRITE);
@@ -520,8 +528,6 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
           } else {
             file.write(fb->buf, fb->len); // payload (image), payload length
             Serial.printf("Saved file to path: %s\n", path.c_str());
-            EEPROM.write(0, pictureNumber);
-            EEPROM.commit();
           }
           file.close();
         }

@@ -152,15 +152,15 @@
 ////////////////////////////////////////
 //if you attach your own PIR sensor
 /**/
-#define PIR_PIN             13
-#define PIR_PIN_ON          HIGH
+//#define PIR_PIN             13
+//#define PIR_PIN_ON          HIGH
 //*/
 ////////////////////////////////////////
 //if there is an SD Attached 
 // note: PINs 12 and 13 are used for the SD card on AI Thinker board. 
 // i.e. don't attach PIR or Buzzer while having an SD card.
-/*
-#define SD_CARD_ON true
+/**/
+//#define SD_CARD_ON true
 //*/
 ////////////////////////////////////////
 // in case you want to add a buzzer

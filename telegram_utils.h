@@ -49,7 +49,7 @@ int Counter_getNextBufferLen=0;
 
 ///////////////////////////////////////////////
 String formulateKeyboardJson(){
-  
+
   String lkeyboardJson = "[";
   lkeyboardJson += " [\"/start\", \"/options\"]";
   lkeyboardJson += ",[\"/sendPhoto\"]";
@@ -57,7 +57,7 @@ String formulateKeyboardJson(){
   lkeyboardJson +=     ",\"/changeRes\"]";
   lkeyboardJson += ",[\"/setlapse\"";
   lkeyboardJson +=     ",\"/restartESP\"]";
-  
+
   lkeyboardJson += "]";
   Serial.print("formulateKeyboardJson:");
   Serial.println(lkeyboardJson);
@@ -119,7 +119,7 @@ String formulateOptionsInlineKeyBoard(){
   #endif
 
   #if defined(PIR_PIN)
-    keyboardJson += "[{ \"text\" : \"Motion Detect is ";
+    keyboardJson += "[{ \"text\" : \"PIR MotionDetect is:";
     keyboardJson += (configItems.motDetectOn?"ON\u2705":"OFF\u274C");
     keyboardJson += "\", \"callback_data\" : \"/motDetectOn\" }],";
   #endif
@@ -128,7 +128,7 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += (configItems.vFlip?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/vFlip\" }],";
 
-  keyboardJson += R"([{ "text" : "VC MotionDetect:)";
+  keyboardJson += R"([{ "text" : "CV MotionDetect is:)";
   keyboardJson += (configItems.motionDetectVC?"ON\u2705":"OFF\u274C");
   keyboardJson += R"(", "callback_data" : "/motionDetectVC" }],)";
 
@@ -137,7 +137,7 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += R"(", "callback_data" : "/alertALL" }],)";
 
   #if defined(SD_CARD_ON)
-    keyboardJson += R"([{ "text" : "Save Photos to SD also:)";
+    keyboardJson += R"([{ "text" : "Save to SD:)";
     keyboardJson += (configItems.saveToSD?"ON\u2705":"OFF\u274C");
     keyboardJson += R"(", "callback_data" : "/saveToSD" }],)";
   #endif
@@ -147,7 +147,7 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += R"(", "callback_data" : "/useDeepSleep" }],)";
 
   #if defined(BUZZER_PIN)
-    keyboardJson += R"([{ "text" : "trigger buzzer on motion detect:)";
+    keyboardJson += R"([{ "text" : "Buzz on MotionDetect:)";
     keyboardJson += (configItems.useBuzzer?"ON\u2705":"OFF\u274C");
     keyboardJson += R"(", "callback_data" : "/useBuzzer" }],)";
   #endif
@@ -514,7 +514,6 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
           char    dateTime[100];
           t = time(NULL);
           tm = localtime(&t);
-          
           sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d\0",
             tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
             tm->tm_hour, tm->tm_min, tm->tm_sec);

@@ -337,20 +337,24 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"motDetectOn      "+sep+"";
   result += (ci->motDetectOn ? String("true") : String("false")) + suffix;
 #endif
+#if defined(SD_CARD_ON)
+  result += prefix+"saveToSD         "+sep+"";
+  result += (ci->saveToSD ? String("true") : String("false"))  + suffix;
+#endif
+#if defined(BUZZER_PIN)
+  result += prefix+"useBuzzer        "+sep+"";
+  result += (ci->useBuzzer ? String("true") : String("false"))  + suffix;
+#endif
   result += prefix+"hMirror          "+sep+"";
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
-  result += prefix+"motionDetectVC   "+sep+"";
+  result += prefix+"motionDetectCV   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
   result += prefix+"alertALL         "+sep+"";
   result += (ci->alertALL ? String("true") : String("false"))  + suffix;
-  result += prefix+"saveToSD         "+sep+"";
-  result += (ci->saveToSD ? String("true") : String("false"))  + suffix;
   result += prefix+"useDeepSleep     "+sep+"";
   result += (ci->useDeepSleep ? String("true") : String("false"))  + suffix;
-  result += prefix+"useBuzzer        "+sep+"";
-  result += (ci->useBuzzer ? String("true") : String("false"))  + suffix;
   result += prefix+"webCaptureOn     "+sep+"";
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
   result += prefix+"frameSize        "+sep+"";

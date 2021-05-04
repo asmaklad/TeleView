@@ -18,7 +18,7 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-/* 
+/*
  * To compile and upload:
  * Required Installation:
  *    ESP32 for Arduino IDE https://dl.espressif.com/dl/package_esp32_index.json
@@ -49,8 +49,8 @@
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
-//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
+//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 //////////////////////////////////////
@@ -66,6 +66,7 @@ int PICTURES_COUNT=0;
 #include "persist.h"
 boolean applyConfigItem (config_item* ci);
 #include "webPages.h"
+#include "ElequentVision.h"
 
 #if defined(I2C_DISPLAY_ADDR)
 #include "display.h"
@@ -74,15 +75,15 @@ boolean applyConfigItem (config_item* ci);
 #include "telegram_utils.h"
 #define uS_TO_S_FACTOR 1000000 
 
-/*
+/* One I day I will give up and remove this.. but not today.
 #if defined(SD_CARD_ON)
 #include "FSBRowser.h"
 #endif
 */
 
 char* ntpServer = "pool.ntp.org";
-long  gmtOffset_sec = 3600;
-int   daylightOffset_sec = 3600;
+long  gmtOffset_sec = 0;
+int   daylightOffset_sec = 0;
 
 bool bTakePhotoTick=false;
 boolean bMotionDetected=false;
@@ -151,15 +152,15 @@ void setup() {
     ESP.restart();
   }
   bCameraInitiated=true;
-  ////////////////////////////  
+  ////////////////////////////
   configItems.frameSize=config.frame_size;
   keyboardJson=formulateKeyboardJson();
   configItems=loadConfiguration();
-  applyConfigItem(&configItems);  
+  applyConfigItem(&configItems);
   Serial.println(printConfiguration(&configItems,""));
-  ////////////////////////////  
+  ////////////////////////////
 #if defined(I2C_DISPLAY_ADDR)
-  display_init();  
+  display_init();
 #endif
   ////////////////////////////
   /*
@@ -170,7 +171,7 @@ void setup() {
   Portal.host().on("/",rootPage);
   Portal.host().on("/delete",deletePage);
   Portal.host().on("/capture",capturePage);
-  Portal.host().on("/capture.jpg",capturePageJpeg);  
+  Portal.host().on("/capture.jpg",capturePageJpeg);
   auxPageConfig.load(AUX_CONFIGPAGE);
   populateResolutionsSelects(auxPageConfig);
   auxPageConfig.on(onPage);
@@ -178,7 +179,7 @@ void setup() {
   ////////////////////////////
   acConfig.apid = configItems.deviceName;
   acConfig.psk  = "tv-ei-694";
-  acConfig.hostName=configItems.deviceName;  
+  acConfig.hostName=configItems.deviceName;
   acConfig.autoRise=true;
   acConfig.title = "TeleView";
   //AUTOCONNECT_USE_PREFERENCES
@@ -284,6 +285,7 @@ void setup() {
 //**********************   The LOOP   ****************************//
 //****************************************************************//
 void loop() {
+
   Portal.handleClient();
 #if defined(PIR_PIN)
   int vPIR = digitalRead(PIR_PIN);
@@ -292,11 +294,11 @@ void loop() {
   Serial.println(vPIR );
   */
   if ( configItems.motDetectOn && vPIR==PIR_PIN_ON ) {
-    Serial.println("Motion Detected.");
-    bot.sendMessage(configItems.adminChatIds, "Motion Detected!","" );
+    Serial.println("PIR Motion Detected.");
+    bot.sendMessage(configItems.adminChatIds, "PIR Motion Detected!","" );
     String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
     if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-      bot.sendMessage(configItems.userChatIds, "Motion Detected!","" );
+      bot.sendMessage(configItems.userChatIds, "PIR Motion Detected!","" );
       String result= sendCapturedImage2Telegram2(configItems.userChatIds);
     }
     Serial.println("result: "+result);
@@ -329,6 +331,34 @@ void loop() {
   }
 #endif
   if (millis() > Bot_lasttime + Bot_mtbs)  {
+    //////////////////////////////////////////////
+    // Computer Vision Motion Detection
+    if (configItems.motionDetectVC){
+      // https://github.com/eloquentarduino/EloquentArduino/blob/1.1.8/examples/ESP32CameraNaiveMotionDetection/ESP32CameraNaiveMotionDetection.ino
+      // https://eloquentarduino.github.io/2020/05/easier-faster-pure-video-esp32-cam-motion-detection/?utm_source=old_version
+      Serial.println(setup_camera(FRAMESIZE_QVGA) ? "OK" : "ERR INIT");
+      if (!capture_still()) {
+          Serial.println("Failed capture");
+          delay(3000);
+          return;
+      }
+      if (motion_detect()) {
+          Serial.println("CV Motion detected");
+          bot.sendMessage(configItems.adminChatIds, "CV Motion Detected!","" );
+          String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+          if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
+            bot.sendMessage(configItems.userChatIds, "CV Motion Detected!","" );
+            String result= sendCapturedImage2Telegram2(configItems.userChatIds);
+          }
+          Serial.println("result: "+result);
+          bMotionDetected=true;
+          delay(1000);
+      }
+      update_frame();
+      // restore origional camera status
+      applyConfigItem(&configItems);
+    }
+    //////////////////////////////////////////////
     int numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
     while(numNewMessages) {
       Serial.println("got response#1");
@@ -383,6 +413,8 @@ void loop() {
   }
 }
 //****************************************************************//
+
+////////////////////////////////////////////////////////////////////////////
 void printLocalTime()
 {
   struct tm timeinfo;
@@ -417,6 +449,8 @@ void tick(){
 ////////////////////////////////////////////////////////////////////////////
 boolean applyConfigItem (config_item* ci) {
   sensor_t * s = esp_camera_sensor_get();
+  //
+  s->set_pixformat(s, PIXFORMAT_JPEG );
   s->set_framesize(s, ci->frameSize);  // UXGA|SXGA|XGA|SVGA|VGA|CIF|QVGA|HQVGA|QQVGA
   s->set_hmirror(s, ci->hMirror);
   s->set_vflip(s, ci->vFlip);
@@ -449,7 +483,7 @@ boolean applyConfigItem (config_item* ci) {
   tkTimeLapse.detach();
   if (ci->lapseTime >0){
     tkTimeLapse.attach(  ci->lapseTime*60 , tick );
-  }  
+  }
 #if defined(I2C_DISPLAY_ADDR)
   if (ci->screenFlip){
     display.setRotation(2);

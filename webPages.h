@@ -82,8 +82,14 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 #ifndef  PIR_PIN
     aux["XmotDetectOn"].as<AutoConnectCheckbox>().enable=false;
 #endif
+#ifndef  SD_CARD_ON
+    aux["XsaveToSD"].as<AutoConnectCheckbox>().enable=false;
+#endif
 #ifndef IS_THERE_A_FLASH
-  aux["XuseFlash"].as<AutoConnectCheckbox>().enable=false;
+    aux["XuseFlash"].as<AutoConnectCheckbox>().enable=false;
+#endif
+#ifndef  BUZZER_PIN
+    aux["XuseBuzzer"].as<AutoConnectCheckbox>().enable=false;
 #endif
   if (Portal.where().equals("/teleView")){
     if (args.hasArg("bxToken"))
@@ -215,11 +221,11 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "global": true
     },
     { "name": "XvFlip","type": "ACCheckbox","value": "","labelPosition": "AC_Infront" ,"label": "Vertical Flip","checked": false,"global": true},
-    { "name": "XmotionDetectVC", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect by Vision not PIR -no DeepSleep", "checked": false, "global": true },
-    { "name": "XalertALL", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect/timelapse to all chatIds not just Admin", "checked": false, "global": true },
-    { "name": "XsaveToSD", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Save Photos to SD also", "checked": false, "global": true },
-    { "name": "XuseDeepSleep", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "goto to deep sleep on MotionDetct and timeLapse", "checked": false, "global": true },
-    { "name": "XuseBuzzer", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "trigger buzzer on motion detect", "checked": false, "global": true },
+    { "name": "XmotionDetectVC", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect by Vision not PIR", "checked": false, "global": true },
+    { "name": "XalertALL", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "AlertAll ,MotionDetect & timelapse sent to all chatIds", "checked": false, "global": true },
+    { "name": "XsaveToSD", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Save Photos to SD ", "checked": false, "global": true },
+    { "name": "XuseDeepSleep", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Goto to deep sleep on MotionDetct or timeLapse", "checked": false, "global": true },
+    { "name": "XuseBuzzer", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Trigger buzzer on motion detect", "checked": false, "global": true },
     {
       "name": "XscreenFlip",
       "type": "ACCheckbox",
@@ -243,7 +249,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "type": "ACCheckbox",
       "value": "",
       "labelPosition": "AC_Infront" ,
-      "label": "Motion Detection Enabled",
+      "label": "PIR Motion Detection Enabled",
       "checked": false,
       "global": true
     },

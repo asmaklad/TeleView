@@ -117,6 +117,9 @@
 
 #define FLASH_LAMP_PIN      4
 
+// AI thinker has an SD CARD attached to it
+#define SD_CARD_ON true
+
 #elif defined(CAMERA_MODEL_TTGO_T1_CAMERA) // Board definition "ESP32 WROVER Module"
 #define PWDN_GPIO_NUM     26
 #define RESET_GPIO_NUM    -1
@@ -156,8 +159,8 @@
 //#define PIR_PIN_ON          HIGH
 //*/
 ////////////////////////////////////////
-//if there is an SD Attached 
-// note: PINs 12 and 13 are used for the SD card on AI Thinker board. 
+//if there is an SD Attached
+// note: PINs 12 and 13 are used for the SD card on AI Thinker board.
 // i.e. don't attach PIR or Buzzer while having an SD card.
 /**/
 //#define SD_CARD_ON true

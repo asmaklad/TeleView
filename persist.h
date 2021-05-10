@@ -319,8 +319,8 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   sprintf(dateTime, "%04d-%02d-%02d %02d:%02d:%02d\0",
     tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday,
     tm->tm_hour, tm->tm_min, tm->tm_sec);
-    
-  result += prefix+"Current Time     "+sep+"";  
+
+  result += prefix+"Current Time     "+sep+"";
   result += String(dateTime)  +suffix;
   //////////////////////////////////////////////
 #if defined(IS_THERE_A_FLASH)

@@ -9,14 +9,15 @@
 #include "camera_pins.h"
 
 #define FRAME_SIZE FRAMESIZE_QVGA
-#define WIDTH 320
-#define HEIGHT 240
-#define BLOCK_SIZE 10
-#define W (WIDTH / BLOCK_SIZE)
-#define H (HEIGHT / BLOCK_SIZE)
-#define BLOCK_DIFF_THRESHOLD 0.2
-#define IMAGE_DIFF_THRESHOLD 0.1
-#define EV_DEBUG 0
+#define EWIDTH 320
+#define EHEIGHT 240
+#define BLOCK_SIZE 20
+#define W (EWIDTH / BLOCK_SIZE)
+#define H (EHEIGHT / BLOCK_SIZE)
+#define BLOCK_DIFF_THRESHOLD 0.30
+#define IMAGE_DIFF_THRESHOLD 0.10
+#define EV_DEBUG 1
+#define EV_DEBUG_EXT 0
 
 
 uint16_t prev_frame[H][W] = { 0 };
@@ -82,9 +83,9 @@ bool capture_still() {
 
 
     // down-sample image in blocks
-    for (uint32_t i = 0; i < WIDTH * HEIGHT; i++) {
-        const uint16_t x = i % WIDTH;
-        const uint16_t y = floor(i / WIDTH);
+    for (uint32_t i = 0; i < EWIDTH * EHEIGHT; i++) {
+        const uint16_t x = i % EWIDTH;
+        const uint16_t y = floor(i / EWIDTH);
         const uint8_t block_x = floor(x / BLOCK_SIZE);
         const uint8_t block_y = floor(y / BLOCK_SIZE);
         const uint8_t pixel = frame_buffer->buf[i];
@@ -99,7 +100,7 @@ bool capture_still() {
         for (int x = 0; x < W; x++)
             current_frame[y][x] /= BLOCK_SIZE * BLOCK_SIZE;
 
-#if DEBUG
+#if EV_DEBUG
     Serial.println("Current frame:");
     print_frame(current_frame);
     Serial.println("---------------");
@@ -115,7 +116,7 @@ bool capture_still() {
  */
 bool motion_detect() {
     uint16_t changes = 0;
-    const uint16_t blocks = (WIDTH * HEIGHT) / (BLOCK_SIZE * BLOCK_SIZE);
+    const uint16_t blocks = (EWIDTH * EHEIGHT) / (BLOCK_SIZE * BLOCK_SIZE);
 
     for (int y = 0; y < H; y++) {
         for (int x = 0; x < W; x++) {
@@ -124,7 +125,7 @@ bool motion_detect() {
             float delta = abs(current - prev) / prev;
 
             if (delta >= BLOCK_DIFF_THRESHOLD) {
-#if EV_DEBUG
+#if EV_DEBUG_EXT
                 Serial.print("diff\t");
                 Serial.print(y);
                 Serial.print('\t');

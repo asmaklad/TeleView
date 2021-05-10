@@ -11,8 +11,15 @@ WebServer Server;
 AutoConnect Portal(Server);
 AutoConnectConfig acConfig;
 AutoConnectAux auxPageConfig;
-///////////////////////////////////////////////////////////
 
+char   dateTime[100];
+time_t currentTimeMills ;
+time_t timeB;
+struct tm  *tmNowTM , *tmDiffTM;
+
+///////////////////////////////////////////////////////////
+void printLocalTime();
+///////////////////////////////////////////////////////////
 void populateResolutionsSelects(AutoConnectAux& aux){
   //aux.fetchElement();
   AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
@@ -91,6 +98,10 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 #ifndef  BUZZER_PIN
     aux["XuseBuzzer"].as<AutoConnectCheckbox>().enable=false;
 #endif
+if (!psramFound()){
+    //TBD
+    //aux["XFaceDetect"].as<AutoConnectCheckbox>().enable=false;
+}
   if (Portal.where().equals("/teleView")){
     if (args.hasArg("bxToken"))
       configItems.botTTelegram=args.arg("bxToken");
@@ -149,8 +160,8 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 ///////////////////////////////////////////////////////////
 static const char AUX_CONFIGPAGE[] PROGMEM = R"(
 {
-  "title": "Teleview",
-  "uri": "/teleView",
+  "title": "Options",
+  "uri": "/options",
   "menu": true,
   "element": [
     {
@@ -221,7 +232,6 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "global": true
     },
     { "name": "XvFlip","type": "ACCheckbox","value": "","labelPosition": "AC_Infront" ,"label": "Vertical Flip","checked": false,"global": true},
-    { "name": "XmotionDetectVC", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect by Vision not PIR", "checked": false, "global": true },
     { "name": "XalertALL", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "AlertAll ,MotionDetect & timelapse sent to all chatIds", "checked": false, "global": true },
     { "name": "XsaveToSD", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Save Photos to SD ", "checked": false, "global": true },
     { "name": "XuseDeepSleep", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Goto to deep sleep on MotionDetct or timeLapse", "checked": false, "global": true },
@@ -253,6 +263,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "checked": false,
       "global": true
     },
+    { "name": "XmotionDetectVC", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect by Vision not PIR", "checked": false, "global": true },
     {
       "name": "Xtimezone",
       "type": "ACSelect",
@@ -295,39 +306,57 @@ void rootPage() {
   String  content =
     "<html>"
     " <head>"
-    "   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+    "   <meta charset=\"UTF-8\" name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
     "   <script type=\"text/javascript\">"
-    "     setTimeout(\"location.reload()\", 60000);"
+    "     setTimeout(\"location.reload()\", 20000);"
     "   </script>"
     " </head>"
     " <body>"
-    "   <h2 align=\"center\" style=\"color:blue;margin:20px;\">Device Name: {{DEVICE_NAME}}</h2>"
-    "   <h3 align=\"center\" style=\"color:gray;margin:10px;\">Uptime: {{DateTime}}</h3>"
-    "   <h3 align=\"center\" style=\"color:gray;margin:10px;\">Pictures Taken: {{PICTURES_COUNT}}</h3>"
-    "       <h3 align=\"center\" style=\"color:gray;margin:10px;\">"
-    "           compiled: {{COMPILE_TIME}} <br/>"
-    "           <a href=\"/capture\">Have a look!</a> "
-    "       </h3>"
-    "   <p></p><p style=\"padding-top:15px;text-align:center\">To Configuire:" AUTOCONNECT_LINK(COG_24) "</p>"
+    "   <div align=\"center\" style=\"color:blue;margin:20px;\">"
+    "     <table>"
+    "       <tr><td>Device Name</td><td><h1>{{DEVICE_NAME}}</h1></td></tr>"
+    //"       <tr><td>Started</td><td>{{START_TIME}}</td></tr>"
+    "       <tr><td>Current</td><td>{{CURRENT_TIME}}</td></tr>"
+    "       <tr><td>Uptime</td><td>{{UP_TIME}}</td></tr>"
+    "       <tr><td>Pictures Taken</td><td>{{PICTURES_COUNT}}</td></tr>"
+    "       <tr><td>Compiled</td><td>{{COMPILE_TIME}}</td></tr>"
+    "       <tr><td>Have a look</td><td><a href=\"/capture\">/capture</a></td></tr>"
+    "       <tr><td>To Configuire</td><td>" AUTOCONNECT_LINK(COG_24) "</td></tr>"
+    "       <tr><td colspan=2><img src=\"/capture.jpg\"/></img></td></tr>"
+    "     </table>"
+    "   </div>"
     //"   <iframe src =\"/capture\" style=\"border:none;\" align=\"center\" width={{width}} height={{height}} > "
-    "       <h3 align=\"center\" style=\"color:gray;margin:10px;\">"
-    "         <br/><img src=\"/capture.jpg\"/><br/>"
-    "       </h3>"
     //"   </iframe>"
-    "   <p style=\"text-align:center;\">Reload the page to update the capture.</p>"
     " </body>"
     "</html>";
-
-  struct tm *tm;
-  time_t  t;
-  char    dateTime[100];
-  t = time(NULL);
-  tm = localtime(&t);
-
-  sprintf(dateTime, "%02d Years -%02d Months -%02d Days  %02d Hrs :%02d Min :%02d Sec\0",
-    tm->tm_year + 1900-1970, tm->tm_mon , tm->tm_mday-1,
-    tm->tm_hour, tm->tm_min, tm->tm_sec);
-  content.replace("{{DateTime}}", String(dateTime));
+  ///////
+  timeB=time(NULL); // now
+  tmNowTM = localtime(&timeB);
+  sprintf(dateTime, "%02d/%02d/%02d, %02d:%02d:%02d\0",
+    tmNowTM->tm_mday,
+    tmNowTM->tm_mon+1,
+    tmNowTM->tm_year+1900,
+    tmNowTM->tm_hour,
+    tmNowTM->tm_min,
+    tmNowTM->tm_sec
+  );
+  content.replace("{{CURRENT_TIME}}", String(dateTime));
+  ///////
+  currentTimeMills=millis()/1000L;
+  Serial.printf("timeB:%d\n",timeB);
+  Serial.printf("currentTimeMills:%d\n",currentTimeMills);
+  tmDiffTM = gmtime (&currentTimeMills);
+  sprintf(dateTime, "%02d Years, %02d Months, %02d Days,  %02d Hrs :%02d Min :%02d Sec\0",
+    tmDiffTM->tm_year -70,
+    tmDiffTM->tm_mon ,
+    tmDiffTM->tm_mday -1,
+    tmDiffTM->tm_hour ,
+    tmDiffTM->tm_min ,
+    tmDiffTM->tm_sec
+  );
+  content.replace("{{UP_TIME}}", String(dateTime));
+  ///////
+  printLocalTime();
   String res=String(resolutions[configItems.frameSize][1]);
   String Width=res.substring(0,res.indexOf("x"));
   String Height=res.substring(res.indexOf("x")+1);
@@ -338,6 +367,17 @@ void rootPage() {
   content.replace("{{PICTURES_COUNT}}",String(PICTURES_COUNT));
 
   Server.send(200,"text/html",content);
+}
+////////////////////////////////////////////////////////////////////////////
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.print("Current Time:");
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 ///////////////////////////////////////////////////////////
 void deletePage() {

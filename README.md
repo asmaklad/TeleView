@@ -236,8 +236,8 @@ Feature 	  |   Description
 
 ## A note about PIR motion Detection and Buzzer alerts:
 1) IN ESP32-CAM AI Thinker the Buzzer and PIR are usually connected to PIN 12 and 13 which are also used for the SD card communication. so please pay attention in case you have issues afterwards.
-2) PIR PIN could be connected to other sensors. Example: a reed switch ( door opening)
-3) Buzzer PIN could be connected to any other External Alert ( a siren , a water pistol , a nerf gun ..etc)
+2) PIR PIN could be connected to other sensors. Example: a reed switch ( door opening) , a button , a laser tripwire ..etc
+3) Buzzer PIN could be connected to any other External Alert. Example: a siren , a water pistol , a nerf gun ..etc
 
 ## A note about Deep Sleep:
 Deep sleep will will be only utilized if one of those options is enabled:

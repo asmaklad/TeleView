@@ -13,10 +13,12 @@
     - [Enabling Disabeling Features at compile time](#enabling-disabeling-features-at-compile-time)
     - [Setting up the WiFi:](#setting-up-the-wifi)
     - [Setting up the Telegrambot:](#setting-up-the-telegrambot)
-    - [OTA](#ota)
+    - [OTA (it is there but doesnt work with all boards)](#ota-it-is-there-but-doesnt-work-with-all-boards)
     - [Having more than one user to use the bot:](#having-more-than-one-user-to-use-the-bot)
     - [Having multiple boards to use the same bot token:](#having-multiple-boards-to-use-the-same-bot-token)
   - [The Telegram Keyboard](#the-telegram-keyboard)
+  - [A note about PIR motion Detection and Buzzer alerts:](#a-note-about-pir-motion-detection-and-buzzer-alerts)
+  - [A note about Deep Sleep:](#a-note-about-deep-sleep)
   - [The Configuration Web interface](#the-configuration-web-interface)
     - [http://TeleView.local/](#httpteleviewlocal)
     - [http://TeleView.local/_ac](#httpteleviewlocal_ac)
@@ -53,7 +55,7 @@
 	* to configure the control options and WiFi AP.
     * configure Telegram-BOT-Token, AdminID of the BOT
 * Web Server for /capture.jpg to make photo available through web. (configurable through Telegram menue)
-* The Device-Name (configurable) decides the hostname of the device on LAN/WiFi 
+* The Device-Name (configurable) decides the hostname of the device on LAN/WiFi
 * Time Lapse feature every X min, chose 0 to disable Time-Lapse.
 * A deep sleep mode is possible with time-lapse and PIR motiion detection for battery operated scenarios.
 * Usual case , only the admin will be notified of the eventd "Alive", "motion detection" and "time-lapse" , but you can also enable alerting of the userId.
@@ -193,11 +195,11 @@ Using Telegram Groups:
   10) All "I am Alive!" events, Motion Detection and time lapse activities will be sent to that group as well.
 
 ### Having multiple boards to use the same bot token:
-As far as I tested, this also works as a way to manage multiple boards at the same time. However you will not be able to figuire out which board is sending the "photo" , "I am Alive!" or "motion detected" events.
+As far as I tested, this also works as a way to manage multiple boards at the same time. However you will not be able to figuire out which board is sending the "photo" , "I am Alive!" ,options or "motion detected" events.
 ## The Telegram Keyboard
 Most of the buttons in the telegram Keyboard are on/off options. 
 
-Command 	  |   Description
+Feature 	  |   Description
 :------------ |  :----------------
 /start		  | 	Press this on the first time you use the bot , it will show some helpful info.
 /options    | 	Will show the current status of the differnt options and flags.
@@ -205,19 +207,51 @@ Command 	  |   Description
 /vFlip	  |	Flips the camera-image upside down.
 /hmirror    |	Mirror the camera-image . (unfortunately; there is no 90 degrees rotate )
 /setLapse   | 	It will ask to insert the lapse time in minutes. insert 0 to disbale, 60 for every 1 Hour, 1440 for once a day ...etc
-/webCaptueon	|	This will disbale/enable the ./capture and ./capture.jpg urls.
+/webCaptureOn	|	This will disbale/enable the ./capture and ./capture.jpg urls.
 
 Will only be shown in TTGO_T1 : (or when enabled in camera_pins.h)
-Command 	  |   Description
+Feature 	  |   Description
 :------------ |  :----------------
 /screenOn	  |	Use the screen to display useful information or switch it off.
 /screenFlip	  |	Flips the screen upside down.
-/motDetectOn  |	Will enable/disable motion detection feature.
+/motDetectOn  |	Will enable/disable PIR motion detection feature.
 
 Will only be shown when an OLED or Flash led available: (or when enabled in camera_pins.h)
-Command 	  |   Description
+Feature 	  |   Description
 :------------ |  :----------------
 /useFlash	  |	 will enable/disbale using the flash upon a camera snapshot.
+
+Other Custome Fatures:
+Feature 	  |   Description
+:------------ |  :----------------
+/saveToSD       | Save Every photo taken to an SD as well as send it to telegram
+/useBuzzer      | Trigger Buzzer whne motion is detected.
+
+Other Generic Fatures:
+Feature 	  |   Description
+:------------ |  :----------------
+/useDeepSleep   | Goto Deep sleep between timelapse ticks and PIR motion detection
+/motionDetectVC | Use Computer Vision (CV) for motion dection
+/alertALL       | Alert both Admin Id and Chat ID
+
+## A note about PIR motion Detection and Buzzer alerts:
+1) IN ESP32-CAM AI Thinker the Buzzer and PIR are usually connected to PIN 12 and 13 which are also used for the SD card communication. so please pay attention in case you have issues afterwards.
+2) PIR PIN could be connected to other sensors. Example: a reed switch ( door opening) , a button , a laser tripwire ..etc
+3) Buzzer PIN could be connected to any other External Alert. Example: a siren , a water pistol , a nerf gun ..etc
+
+## A note about Deep Sleep:
+Deep sleep will will be only utilized if one of those options is enabled:
+1) PIR motion detection
+2) time-lapse
+
+Deep Sleep puts the ESP into sleep mode. so don't expect it to respond to any of your Telegram commands during its sleep.
+Deep Sleep will not play well with those features:
+1) CV motion detection , since it uses the Camera and the microcontroller to make constant checks of the frame changes.
+2) WebCapture for the obvious reasons.
+
+if it happens you put the ESP into Deep sleep and somehow you chnaged your mind, then follow these steps:
+1) issue the command "/setLapse" by typing it or clicking the button.
+2) restart your ESP from the physical button on theboard or by disconnecting and then connecting it again.
 
 ## The Configuration Web interface
 

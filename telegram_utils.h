@@ -6,6 +6,7 @@
 #include "esp_camera.h"
 #include "persist.h"
 #include "webPages.h"
+#include <ArduinoJson.h>
 
 #if defined(SD_CARD_ON)
 #include "FS.h"                // SD Card ESP32
@@ -24,7 +25,6 @@ boolean bTelegramBotInitiated=false;
 boolean bInlineKeyboardResolution=false;
 boolean bInlineKeyboardExtraOptions=false;
 
-
 ////////////////////////////////////////////////
 int Bot_mtbs = 1000; //mean time between scan messages
 long Bot_lasttime;   //last time messages' scan has been done
@@ -32,8 +32,8 @@ String keyboardJson = "" ;
 boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
-//String sendCapturedImage2Telegram(String chat_id);
-String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id);
+String alertTelegram(String msg);
+String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0);
 void handleNewMessages(int numNewMessages);
 String formulateKeyboardJson();
 
@@ -46,10 +46,22 @@ bool dataAvailable = false;
 int Counter_isMoreDataAvailable=0;
 int Counter_getNextBuffer=0;
 int Counter_getNextBufferLen=0;
-
+///////////////////////////////////////////////
+String alertTelegram(String msg){
+    String result="";
+    Serial.print("AlertMessage:"+msg);
+    bot.sendMessage(configItems.adminChatIds, msg,"" );
+    result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+    if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
+      bot.sendMessage(configItems.userChatIds, msg,"" );
+      String result= sendCapturedImage2Telegram2(configItems.userChatIds);
+    }
+    Serial.println(result);
+    return(result);
+}
 ///////////////////////////////////////////////
 String formulateKeyboardJson(){
-  
+
   String lkeyboardJson = "[";
   lkeyboardJson += " [\"/start\", \"/options\"]";
   lkeyboardJson += ",[\"/sendPhoto\"]";
@@ -57,7 +69,7 @@ String formulateKeyboardJson(){
   lkeyboardJson +=     ",\"/changeRes\"]";
   lkeyboardJson += ",[\"/setlapse\"";
   lkeyboardJson +=     ",\"/restartESP\"]";
-  
+
   lkeyboardJson += "]";
   Serial.print("formulateKeyboardJson:");
   Serial.println(lkeyboardJson);
@@ -119,25 +131,31 @@ String formulateOptionsInlineKeyBoard(){
   #endif
 
   #if defined(PIR_PIN)
-    keyboardJson += "[{ \"text\" : \"Motion Detect is ";
+    keyboardJson += "[{ \"text\" : \"PIR MotionDetect is:";
     keyboardJson += (configItems.motDetectOn?"ON\u2705":"OFF\u274C");
     keyboardJson += "\", \"callback_data\" : \"/motDetectOn\" }],";
   #endif
+  keyboardJson += R"([{ "text" : "CV MotionDetect is:)";
+  keyboardJson += (configItems.motionDetectVC?"ON\u2705":"OFF\u274C");
+  keyboardJson += R"(", "callback_data" : "/motionDetectVC" }],)";
+  if (psramFound()){
+    // for face detection
+  }
+
+  keyboardJson += "[{ \"text\" : \"Camera Mirror is:";
+  keyboardJson += (configItems.hMirror?"ON\u2705":"OFF\u274C");
+  keyboardJson += "\", \"callback_data\" : \"/hMirror\" }],";
 
   keyboardJson += "[{ \"text\" : \"Camera Flip is:";
   keyboardJson += (configItems.vFlip?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/vFlip\" }],";
-
-  keyboardJson += R"([{ "text" : "VC MotionDetect:)";
-  keyboardJson += (configItems.motionDetectVC?"ON\u2705":"OFF\u274C");
-  keyboardJson += R"(", "callback_data" : "/motionDetectVC" }],)";
 
   keyboardJson += R"([{ "text" : "Alert all:)";
   keyboardJson += (configItems.alertALL?"ON\u2705":"OFF\u274C");
   keyboardJson += R"(", "callback_data" : "/alertALL" }],)";
 
   #if defined(SD_CARD_ON)
-    keyboardJson += R"([{ "text" : "Save Photos to SD also:)";
+    keyboardJson += R"([{ "text" : "Save to SD:)";
     keyboardJson += (configItems.saveToSD?"ON\u2705":"OFF\u274C");
     keyboardJson += R"(", "callback_data" : "/saveToSD" }],)";
   #endif
@@ -147,14 +165,10 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += R"(", "callback_data" : "/useDeepSleep" }],)";
 
   #if defined(BUZZER_PIN)
-    keyboardJson += R"([{ "text" : "trigger buzzer on motion detect:)";
+    keyboardJson += R"([{ "text" : "Buzz on MotionDetect:)";
     keyboardJson += (configItems.useBuzzer?"ON\u2705":"OFF\u274C");
     keyboardJson += R"(", "callback_data" : "/useBuzzer" }],)";
   #endif
-
-  keyboardJson += "[{ \"text\" : \"Camera Mirror is:";
-  keyboardJson += (configItems.hMirror?"ON\u2705":"OFF\u274C");
-  keyboardJson += "\", \"callback_data\" : \"/hMirror\" }],";
 
   keyboardJson += "[{ \"text\" : \"Web Capture is:";
   keyboardJson += (configItems.webCaptureOn?"ON\u2705":"OFF\u274C");
@@ -351,10 +365,10 @@ void handleNewMessages(int numNewMessages) {
 
 ///////////////////////////////////////////////
 
-String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
+String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
-
+  StaticJsonDocument<2048> doc;
   String result="success";
   camera_fb_t * fb = NULL;
 
@@ -383,6 +397,13 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
     delay(1000);
     ESP.restart();
   }
+#if defined(FLASH_LAMP_PIN)
+  if (configItems.useFlash){
+    delay(10);
+    digitalWrite(FLASH_LAMP_PIN, LOW); 
+    Serial.println("Flash-lamp OFF");
+  }
+#endif
   int fb_width=fb->width;
   int fb_height=fb->height;
   Serial.println("sendChatAction#1");
@@ -494,59 +515,82 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0) {
   Serial.print("sendCapturedImage2Telegram2:getBody: ");
   Serial.println(getBody);
   Serial.println();
+  // Deserialize the JSON document
+  // sample:
+  // {"ok":false,"error_code":400,"description":"Bad Request: IMAGE_PROCESS_FAILED"}
+  // {"ok":true,"result":{"message_id":3914,"from":{"id":1748863501,"is_bot":true,"first_name":"ESP32_CAM_04_bot","username":"ESP32_CAM_04_bot"},"chat":{"id":591479121,"first_name":"A","last_name":"Maklad","username":"asmaklad","type":"private"},"date":1620390975,"photo":[{"file_id":"AgACAgQAAxkDAAIPSmCVND8eYR6M8XHIZykZp_CHHBI-AAKhuDEbWquoUIa2-YNz89PNEjUyLl0AAwEAAwIAA20AAx4iAQABHwQ","file_unique_id":"AQADEjUyLl0AAx4iAQAB","file_size":9221,"width":320,"height":240},{"file_id":"AgACAgQAAxkDAAIPSmCVND8eYR6M8XHIZykZp_CHHBI-AAKhuDEbWquoUIa2-YNz89PNEjUyLl0AAwEAAwIAA3gAAx8iAQABHwQ","file_unique_id":"AQADEjUyLl0AAx8iAQAB","file_size":26810,"width":800,"height":600}],"caption":"800x600, 26810 B"}}
+  if (getBody.equals("")){
+    result="Empty Response, Sending Failed.";
+  }else{
+    DeserializationError error = deserializeJson(doc, getBody);
+    // Test if parsing succeeds.
+    if (error) {
+      Serial.print(F("sendCapturedImage2Telegram2:deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      result="Can't parse response.";
+    }
+    boolean responseOK=doc["ok"];
+    if (!responseOK){
+      result=doc["description"].as<String>();
+    }
+  }
   PICTURES_COUNT++;
   botClient.stop();
-
-  #if defined(SD_CARD_ON)
-    if (configItems.saveToSD) {
-      Serial.println("Saving to SD Card.");
-      if(!SD_MMC.begin()){
-        Serial.println("SD Card Mount Failed");
-        result="SD Card Mount Failed";
+  // saving to SD card.
+#if defined(SD_CARD_ON)
+  if (configItems.saveToSD) {
+    Serial.println("Saving to SD Card.");
+    if(!SD_MMC.begin()){
+      Serial.println("SD Card Mount Failed");
+      result="SD Card Mount Failed";
+    }else{
+      uint8_t cardType = SD_MMC.cardType();
+      if(cardType == CARD_NONE){
+        Serial.println("No SD Card attached");
+        result="No SD Card attached";
       }else{
-        uint8_t cardType = SD_MMC.cardType();
-        if(cardType == CARD_NONE){
-          Serial.println("No SD Card attached");
-          result="No SD Card attached";
-        }else{
-          struct tm *tm;
-          time_t  t;
-          char    dateTime[100];
-          t = time(NULL);
-          tm = localtime(&t);
-          
-          sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d\0",
-            tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
-            tm->tm_hour, tm->tm_min, tm->tm_sec);
-          // Path where new picture will be saved in SD Card
-          String path = "/picture" + String(dateTime) +".jpg";
-          fs::FS &fs = SD_MMC;
-          Serial.printf("Picture file name: %s\n", path.c_str());
-          File file = fs.open(path.c_str(), FILE_WRITE);
-          if(!file){
-            Serial.println("Failed to open file in writing mode");
-          } else {
-            file.write(fb->buf, fb->len); // payload (image), payload length
-            Serial.printf("Saved file to path: %s\n", path.c_str());
-          }
-          file.close();
+        struct tm *tm;
+        time_t  t;
+        char    dateTime[100];
+        t = time(NULL);
+        tm = localtime(&t);
+        sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d\0",
+          tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
+          tm->tm_hour, tm->tm_min, tm->tm_sec);
+        // Path where new picture will be saved in SD Card
+        String path = "/picture" + String(dateTime) +".jpg";
+        fs::FS &fs = SD_MMC;
+        Serial.printf("Picture file name: %s\n", path.c_str());
+        File file = fs.open(path.c_str(), FILE_WRITE);
+        if(!file){
+          Serial.println("Failed to open file in writing mode");
+        } else {
+          file.write(fb->buf, fb->len); // payload (image), payload length
+          Serial.printf("Saved file to path: %s\n", path.c_str());
+          Serial.printf("Card Size: %d\n",SD_MMC.cardSize());
+          Serial.printf("Total KBytes: %d\n",SD_MMC.totalBytes()/1024);
+          Serial.printf("Used KBytes: %d\n",SD_MMC.usedBytes()/1024);
         }
+        file.close();
       }
     }
-  #endif
-  esp_camera_fb_return(fb);
 #if defined(FLASH_LAMP_PIN)
-  if (configItems.useFlash){
-    delay(10);
-    digitalWrite(FLASH_LAMP_PIN, LOW); 
-    Serial.println("Flash-lamp OFF");
+    if (configItems.useFlash){
+      delay(10);
+      digitalWrite(FLASH_LAMP_PIN, LOW); 
+      Serial.println("Flash-lamp OFF");
+    }
+#endif
   }
 #endif
+  esp_camera_fb_return(fb);
 
 #if defined(USE_OLED_AS_FLASH)
   display_Clear();
 #endif
-  bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB:"+result,"" );
+  if (!result.equals("success")){
+    bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB:"+result,"" );
+  }
   return(result);
 }
 

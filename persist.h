@@ -83,6 +83,14 @@ struct config_item {
   framesize_t frameSize;
   boolean hMirror;
   boolean vFlip;
+  boolean sMTPTLS;
+  int sMTPPort;
+  String sMTPPassword;
+  String sMTPUsername;
+  String sMTPServer;
+  String userEmail;
+  String adminEmail;
+  boolean sendEmail;
   boolean motionDetectVC;
   boolean alertALL;
   boolean saveToSD;
@@ -98,27 +106,19 @@ struct config_item {
   int lapseTime;
   String timeZone;
   boolean webCaptureOn;
-  // TODO
-  /*
-   *  jpeg_Qualtiy: value
-   *  WhiteBalance: value
-   *  Brightness: value
-   *  /sendVideo ?
-   *  /sendAudio ?
-   *  motion detect by Image not PIR  ON/OFF
-   *    face detect : ON/OFF and face recognize then add to Photo Caption.
-   *  send-email: email,server,token..etc
-   *  motionDetect Active times: define times where motion detection is enabled.
-   *  send photo at: sunrise, noon, afternoon, late afternoon, sunset. with offset time option.
-   *    Requires Geo Location info (send location telegram message to the bot), 
-   *    Requires NTP syncing. uses time zone ...etc.
-   *  integrate MQTT: on all events ,send an MQTT message
-  */
 } configItems {
   .useFlash = true,
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
+  .sMTPTLS = true,
+  .sMTPPort = 0,
+  .sMTPPassword = "",
+  .sMTPUsername = "",
+  .sMTPServer = "",
+  .userEmail = "",
+  .adminEmail = "",
+  .sendEmail = true,
   .motionDetectVC = false,
   .alertALL = false,
   .saveToSD = true,
@@ -142,7 +142,7 @@ void deleteConfiguration();
 String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",char* sep="|");
 ////////////////////////////////////////////////////////////////////////////
 void deleteConfiguration(){
-  if (!prefs.begin("settings",true))
+  if (!prefs.begin("settings",false)) // False=RW
   {
     Serial.println("failed find settings prefrences! returning default."); 
     prefs.end();
@@ -155,6 +155,14 @@ void deleteConfiguration(){
     prefs.remove("frameSize");
     prefs.remove("hMirror");
     prefs.remove("vFlip");
+    prefs.remove("sMTPTLS");
+    prefs.remove("sMTPPort");
+    prefs.remove("sMTPPassword");
+    prefs.remove("sMTPUsername");
+    prefs.remove("sMTPServer");
+    prefs.remove("userEmail");
+    prefs.remove("adminEmail");
+    prefs.remove("sendEmail");
     prefs.remove("motionDetectVC");
     prefs.remove("alertALL");
     prefs.remove("saveToSD");
@@ -181,16 +189,26 @@ config_item loadConfiguration() {
   config_item ci ;
   if (!prefs.begin("settings",true))
   {
-    Serial.println("failed find settings prefrences! returning default."); 
+    Serial.println("failed find settings prefrences! returning default.");
     prefs.end();
     return(configItems);
   }else{
-    Serial.println("found settings prefrences.");    
+    Serial.println("found settings prefrences.");
     //////////////////////////////////////////////
     ci.useFlash = prefs.getBool("useFlash",configItems.useFlash);
     ci.frameSize = (framesize_t) prefs.getUInt("frameSize",configItems.frameSize);
     ci.hMirror = prefs.getBool("hMirror",configItems.hMirror);
     ci.vFlip = prefs.getBool("vFlip",configItems.vFlip);
+
+    ci.sMTPTLS = prefs.getBool("sMTPTLS",configItems.sMTPTLS);
+    ci.sMTPPort = prefs.getInt("sMTPPort",configItems.sMTPPort);
+    ci.sMTPPassword = prefs.getString("sMTPPassword",configItems.sMTPPassword);
+    ci.sMTPUsername = prefs.getString("sMTPUsername",configItems.sMTPUsername);
+    ci.sMTPServer = prefs.getString("sMTPServer",configItems.sMTPServer);
+    ci.userEmail = prefs.getString("userEmail",configItems.userEmail);
+    ci.adminEmail = prefs.getString("adminEmail",configItems.adminEmail);
+    ci.sendEmail = prefs.getBool("sendEmail",configItems.sendEmail);
+
     ci.motionDetectVC = prefs.getBool("motionDetectVC",configItems.motionDetectVC);
     ci.alertALL = prefs.getBool("alertALL",configItems.alertALL);
     ci.saveToSD = prefs.getBool("saveToSD",configItems.saveToSD);
@@ -201,7 +219,7 @@ config_item loadConfiguration() {
     ci.screenOn = prefs.getBool("screenOn",configItems.screenOn);
     ci.motDetectOn = prefs.getBool("motDetectOn",configItems.motDetectOn);
     ci.lapseTime=prefs.getInt("lapseTime",configItems.lapseTime);
-    ci.webCaptureOn=prefs.getBool("webCaptureOn",configItems.webCaptureOn);  
+    ci.webCaptureOn=prefs.getBool("webCaptureOn",configItems.webCaptureOn);
     ////////////////////////
     ci.deviceName=prefs.getString("deviceName",configItems.deviceName);
     ci.botTTelegram=prefs.getString("botTTelegram",configItems.botTTelegram);
@@ -217,7 +235,7 @@ config_item loadConfiguration() {
 boolean saveConfiguration(config_item* ci) {
   Serial.println("saveConfiguration:EEPROM Write:start");
   boolean bDirty=false;
-  if (!prefs.begin("settings")){
+  if (!prefs.begin("settings",false)){
     Serial.println("failed find settings prefrences! returning default."); 
     prefs.end();
     return (false);
@@ -230,6 +248,24 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("hMirror",ci->hMirror); bDirty=true; }
     if (prefs.getBool("vFlip")!=ci->vFlip)
       { prefs.putBool("vFlip",ci->vFlip); bDirty=true; }
+    //
+    if (prefs.getBool("sMTPTLS")!=ci->sMTPTLS)
+      { prefs.putBool("sMTPTLS",ci->sMTPTLS); bDirty=true; }
+    if (prefs.getInt("sMTPPort")!=ci->sMTPPort)
+      { prefs.putInt("sMTPPort",ci->sMTPPort); bDirty=true; }
+    if (prefs.getString("sMTPPassword")!=ci->sMTPPassword)
+      { prefs.putString("sMTPPassword",ci->sMTPPassword); bDirty=true; }
+    if (prefs.getString("sMTPUsername")!=ci->sMTPUsername)
+      { prefs.putString("sMTPUsername",ci->sMTPUsername); bDirty=true; }
+    if (prefs.getString("sMTPServer")!=ci->sMTPServer)
+      { prefs.putString("sMTPServer",ci->sMTPServer); bDirty=true; }
+    if (prefs.getString("userEmail")!=ci->userEmail)
+      { prefs.putString("userEmail",ci->userEmail); bDirty=true; }
+    if (prefs.getString("adminEmail")!=ci->adminEmail)
+      { prefs.putString("adminEmail",ci->adminEmail); bDirty=true; }
+    if (prefs.getBool("sendEmail")!=ci->sendEmail)
+      { prefs.putBool("sendEmail",ci->sendEmail); bDirty=true; }
+    //
     if (prefs.getBool("motionDetectVC")!=ci->motionDetectVC)
       { prefs.putBool("motionDetectVC",ci->motionDetectVC); bDirty=true; }
     if (prefs.getBool("alertALL")!=ci->alertALL)
@@ -253,23 +289,23 @@ boolean saveConfiguration(config_item* ci) {
     ///////////////////////////////
     if (!prefs.getString("deviceName").equals(ci->deviceName)){
       prefs.putString("deviceName",ci->deviceName);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("botTTelegram").equals(ci->botTTelegram)){
       prefs.putString("botTTelegram",ci->botTTelegram);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("adminChatIds").equals(ci->adminChatIds)){
       prefs.putString("adminChatIds",ci->adminChatIds);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("userChatIds").equals(ci->userChatIds)){
       prefs.putString("userChatIds",ci->userChatIds);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("timeZone").equals(ci->timeZone)){
       prefs.putString("timeZone",ci->timeZone);
-      bDirty=true; 
+      bDirty=true;
     }
   }
   prefs.end();
@@ -351,6 +387,22 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
+  result += prefix+"sMTPTLS          "+sep+"";
+  result += (ci->sMTPTLS ? String("true") : String("false"))  + suffix;
+  result += prefix+"sMTPPort         "+sep+"";
+  result += String(ci->sMTPPort)  + suffix;
+  //result += prefix+"sMTPPassword     "+sep+"";
+  //result += String(ci->sMTPPassword)  + suffix;
+  result += prefix+"sMTPUsername     "+sep+"";
+  result += String(ci->sMTPUsername)  + suffix;
+  result += prefix+"sMTPServer       "+sep+"";
+  result += String(ci->sMTPServer)  + suffix;
+  result += prefix+"userEmail        "+sep+"";
+  result += String(ci->userEmail)  + suffix;
+  result += prefix+"adminEmail       "+sep+"";
+  result += String(ci->adminEmail)  + suffix;
+  result += prefix+"sendEmail        "+sep+"";
+  result += (ci->sendEmail ? String("true") : String("false"))  + suffix;
   result += prefix+"motionDetectCV   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
   result += prefix+"alertALL         "+sep+"";

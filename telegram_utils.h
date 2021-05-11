@@ -150,6 +150,10 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += (configItems.vFlip?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/vFlip\" }],";
 
+  keyboardJson += R"([{ "text" : "Alert by Email. )";
+  keyboardJson += (configItems.sendEmail?"ON\u2705":"OFF\u274C");
+  keyboardJson += R"(", "callback_data" : "/sendEmail" }],)";
+
   keyboardJson += R"([{ "text" : "Alert all:)";
   keyboardJson += (configItems.alertALL?"ON\u2705":"OFF\u274C");
   keyboardJson += R"(", "callback_data" : "/alertALL" }],)";
@@ -222,6 +226,8 @@ void handleNewMessages(int numNewMessages) {
             configItems.hMirror = !configItems.hMirror;
           }else if (text == "/vFlip") {
             configItems.vFlip = !configItems.vFlip;
+          }else if (text == "/sendEmail") {
+            configItems.sendEmail = !configItems.sendEmail;
           }else if (text == "/motionDetectVC") {
             configItems.motionDetectVC = !configItems.motionDetectVC;
           }else if (text == "/alertALL") {

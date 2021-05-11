@@ -49,8 +49,8 @@
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
-//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
+//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 //////////////////////////////////////
@@ -176,9 +176,15 @@ void setup() {
   Portal.host().on("/delete",deletePage);
   Portal.host().on("/capture",capturePage);
   Portal.host().on("/capture.jpg",capturePageJpeg);
+  //
   auxPageConfig.load(AUX_CONFIGPAGE);
-  populateResolutionsSelects(auxPageConfig);
+    populateResolutionsSelects(auxPageConfig);
   auxPageConfig.on(onPage);
+  //
+  auxPageCapture.load(AUX_CAPTURE);
+  auxPageCapture.on(onCapture);
+  //
+  Portal.join(auxPageCapture);
   Portal.join(auxPageConfig);
   ////////////////////////////
   acConfig.apid = configItems.deviceName;

@@ -150,6 +150,7 @@ void deleteConfiguration(){
   }else{
     Serial.println("Deleting all settings");
     prefs.clear();
+    /*
     prefs.remove("useFlash");
     prefs.remove("frameSize");
     prefs.remove("hMirror");
@@ -171,6 +172,7 @@ void deleteConfiguration(){
     prefs.remove("userChatIds");
     prefs.remove("lapseTime");
     prefs.remove("timeZone");
+    */
     prefs.end();
   }
 }
@@ -213,7 +215,7 @@ config_item loadConfiguration() {
 }
 ////////////////////////////////////////////////////////////////////////////
 boolean saveConfiguration(config_item* ci) {
-  Serial.println("EEPROM Write:start");
+  Serial.println("saveConfiguration:EEPROM Write:start");
   boolean bDirty=false;
   if (!prefs.begin("settings")){
     Serial.println("failed find settings prefrences! returning default."); 
@@ -271,7 +273,7 @@ boolean saveConfiguration(config_item* ci) {
     }
   }
   prefs.end();
-  Serial.println("EEPROM Write:End");
+  Serial.println("saveConfiguration:EEPROM Write:End");
   return(bDirty);
 }
 

@@ -11,6 +11,7 @@ WebServer Server;
 AutoConnect Portal(Server);
 AutoConnectConfig acConfig;
 AutoConnectAux auxPageConfig;
+AutoConnectAux auxPageCapture;
 
 char   dateTime[100];
 time_t currentTimeMills ;
@@ -71,16 +72,22 @@ bool captivePortalStarted(IPAddress ip){
   return(true);
 }
 ///////////////////////////////////////////////////////////
-String onPage(AutoConnectAux& aux, PageArgument& args) {
-  Serial.print("Portal.where()");
+String onCapture(AutoConnectAux& aux, PageArgument& args) {
+  Serial.print("onCapture:Portal.where()");
   Serial.println(Portal.where());
-  Serial.print("args.size()");
+  Serial.print("onCapture:args.size()");
   Serial.println(args.size());
+  return String("");
+}
+///////////////////////////////////////////////////////////
+String onPage(AutoConnectAux& aux, PageArgument& args) {
+  Serial.print("onPage:Portal.where()");
+  Serial.println(Portal.where());
+  Serial.print("onPage:args.size()");
+  Serial.println(args.size());
+  String result="Success";
   for (int i=0;i<args.args();i++){
-    Serial.print(args.argName(i));
-    Serial.print(":");
-    Serial.print(args.arg(i));
-    Serial.println();
+    Serial.printf( "%s:%s\n", args.argName(i).c_str(), String(args.arg(i)).c_str() );
   }
 #ifndef  I2C_DISPLAY_ADDR
     aux["XscreenOn"].as<AutoConnectCheckbox>().enable=false;
@@ -102,7 +109,9 @@ if (!psramFound()){
     //TBD
     //aux["XFaceDetect"].as<AutoConnectCheckbox>().enable=false;
 }
-  if (Portal.where().equals("/teleView")){
+  // the source page is also /teleview and has some args with it, then we need to save it.
+  if (Portal.where().equals("/teleView") && args.size()>0 ){
+    result="Save Error";
     if (args.hasArg("bxToken"))
       configItems.botTTelegram=args.arg("bxToken");
     if (args.hasArg("XTelegramAdminChatId"))
@@ -132,7 +141,10 @@ if (!psramFound()){
     configItems.motDetectOn=(args.hasArg("XmotDetectOn")?true:false);
     applyConfigItem(&configItems);
     saveConfiguration(&configItems);
-  }else{
+    result="Saved";
+  }else if (args.size()==0) { 
+    // no arguments wehere provided, then we need to load
+    result="Load Error";
     aux.fetchElement();
     aux["bxToken"].as<AutoConnectInput>().value=configItems.botTTelegram;
     aux["XTelegramAdminChatId"].as<AutoConnectInput>().value=configItems.adminChatIds;
@@ -154,14 +166,18 @@ if (!psramFound()){
         String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1])
     );
     Serial.println("XframeSize_select:"+String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1]));
+    result="Loaded";
+  } else{
+    result="This Shouldn't happen";
   }
-  return String();
+  aux["XResult"].value=result;
+  return String("");
 }
 ///////////////////////////////////////////////////////////
 static const char AUX_CONFIGPAGE[] PROGMEM = R"(
 {
   "title": "Options",
-  "uri": "/options",
+  "uri": "/teleView",
   "menu": true,
   "element": [
     {
@@ -180,7 +196,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "type": "ACInput",
       "label": "Device Name",
       "placeholder": "TeleView",
-      "pattern": "%s",
+      "pattern": "^(.+)$",
       "global": true
     },
     {
@@ -188,7 +204,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "type": "ACInput",
       "label": "Lapse Time-min",
       "placeholder": "720",
-      "pattern": "%d",
+      "pattern": "^([0-9]+)$",
       "global": true
     },
     {
@@ -196,7 +212,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "type": "ACInput",
       "label": "Telegram Bot Token",
       "placeholder": "Bot:Token",
-      "pattern": "%s",
+      "pattern": "^(.+)$",
       "global": true
     },
     {
@@ -297,6 +313,33 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "type": "ACSubmit",
       "value": "Cancel",
       "uri": "/_ac"
+    },
+    {
+      "name": "XResult",
+      "type": "ACText",
+      "value": "XYZ",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
+    }
+  ]
+}
+)";
+///////////////////////////////////////////////////////////
+static const char AUX_CAPTURE[] PROGMEM = R"(
+{
+  "title": "Capture",
+  "uri": "/Xcapture",
+  "menu": true,
+  "element": [
+    {
+      "name": "CCaption",
+      "type": "ACText",
+      "value": "<h2>TeleView Capture</h2>",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
+    },
+    {
+      "name": "CCapture",
+      "type": "ACElement",
+      "value": "<img src=\"/capture.jpg\"/></img>"
     }
   ]
 }

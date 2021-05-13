@@ -29,9 +29,9 @@ void populateResolutionsSelects(AutoConnectAux& aux){
   } else {
     maxRes = FRAMESIZE_SVGA;
   }
-  */
   int maxRes=0;
   maxRes = FRAMESIZE_UXGA;
+  */
   //////
   AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
   selectElementFS.empty();

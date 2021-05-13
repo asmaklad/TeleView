@@ -46,13 +46,19 @@
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
 //#define CAMERA_MODEL_ESP_EYE
-//#define CAMERA_MODEL_M5STACK_PSRAM
+//#define CAMERA_MODEL_M5STACK_PSRAM        // Board definition Boards->ESP32 Arduino->"M5Stack Timer-CAM"
+                                          //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
 //#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
 #define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
+#if CONFIG_OV3660_SUPPORT
+int maxRes=FRAMESIZE_QXGA;
+#else
+int maxRes=FRAMESIZE_UXGA;
+#endif
 //////////////////////////////////////
 String compileDate=String(__DATE__);
 String compileTime=String(__TIME__);
@@ -265,7 +271,9 @@ void setup() {
   daylightOffset_sec=0;
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   ///////////////////////////////////
+#ifndef CAMERA_MODEL_M5STACK_WIDE
   botClient.setInsecure();
+#endif
   //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.updateToken(configItems.botTTelegram);
   //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");

@@ -10,8 +10,13 @@
 Preferences prefs;
 
 time_t timeOfLastPhoto=0;
-
+/*
+look in  resolution_info_t resolution[FRAMESIZE_INVALID]
+in https://github.com/espressif/esp32-camera/blob/master/driver/sensor.c
+in https://github.com/espressif/esp32-camera/blob/master/driver/include/sensor.h framesize_t
+*/
 String resolutions[][13]={ 
+  // OV2640 2MP
   {"96X96",    "96x96" },				      //    FRAMESIZE_96X96,    // 96x96
   {"QQVGA",    "160x120" },           //    FRAMESIZE_QQVGA,    // 160x120
   {"QCIF",     "176x144" },           //    FRAMESIZE_QCIF,     // 176x144
@@ -25,7 +30,12 @@ String resolutions[][13]={
   {"XGA",      "1024x768" },          //    FRAMESIZE_XGA,      // 1024x768
   {"HD",       "1280x720" },          //    FRAMESIZE_HD,       // 1280x720
   {"SXGA",     "1280x1024" },         //    FRAMESIZE_SXGA,     // 1280x1024
-  {"UXGA",     "1600x1200" }          //    FRAMESIZE_UXGA,     // 1600x1200
+  {"UXGA",     "1600x1200" },         //    FRAMESIZE_UXGA,     // 1600x1200
+  // OV3660 3MP
+  {"FHD",        "1920x1080" },       //    FRAMESIZE_FHD,     // 1600x1200
+  {"PortraitHD", "720x1280" },        //    FRAMESIZE_P_HD,     // 1600x1200
+  {"Portrait3MP","864x1536" },        //    FRAMESIZE_P_3MP,     // 1600x1200
+  {"QXGA",       "2048x1536" }        //    FRAMESIZE_QXGA,     // 1600x1200  
 };
 ///////////////////////////////////////////////////////////
 typedef struct {
@@ -64,7 +74,6 @@ static const Timezone_t TZ[] = {
 int matchResolutionText(String text){
   int result=-1;
   Serial.println("TESTX:"+text);
-  int maxRes=FRAMESIZE_UXGA;
   for (int i=0;i<=maxRes;i++){
     Serial.println("compareTo:"+String(resolutions[i][0]));
     if ((text.compareTo(String(resolutions[i][0])))==0){

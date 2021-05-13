@@ -76,7 +76,7 @@ int matchResolutionText(String text){
   Serial.println("TESTX:"+text);
   for (int i=0;i<=maxRes;i++){
     Serial.println("compareTo:"+String(resolutions[i][0]));
-    if ((text.compareTo(String(resolutions[i][0])))==0){
+    if ((text.compareTo(String("/"+resolutions[i][0])))==0){
       result=i;
       break;
     }
@@ -333,11 +333,13 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Local URL:"+sep+"";
   result += "<a href='http://" + ci->deviceName +".local'>" + ci->deviceName +".local</a>" + suffix;
   result += "<pre>\n";
+  Serial.println("printConfiguration#1");
   result += prefix+" *Attribute*     "+sep+" *Value* "+suffix;
   result += prefix+"Device Name      "+sep+"";
   result += ci->deviceName + suffix;
   result += prefix+"WIFI SSID        "+sep+"";
   result += WiFi.SSID() + suffix;
+  Serial.println("printConfiguration#2");
   result += prefix+"PSRAM ?          "+sep+"";
   result += (psramFound() ? String("true") : String("false")) +suffix;
   result += prefix+"PSRAM SIZE       "+sep+"";
@@ -347,13 +349,17 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"compileDate      "+sep+"";
   result += compileDate +suffix;
   result += prefix+"compileTime      "+sep+"";
+  Serial.println("printConfiguration#3");
   result += compileTime +suffix;
   result += prefix+"compileCompiler  "+sep+"";
   result += compileCompiler +suffix;
+  Serial.println("printConfiguration#4");
   result += prefix+"Chip Model       "+sep+"";
   result += ESP.getChipModel()  +suffix;
+  Serial.println("printConfiguration#5");
   result += prefix+"Chip Revision    "+sep+"";
   result += ESP.getChipRevision()  +suffix;
+  Serial.println("printConfiguration#6");
   result += prefix+"Chip Cores       "+sep+"";
   result += ESP.getChipCores()  +suffix;
   //////////////////////////////////////////////
@@ -370,6 +376,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Current Time     "+sep+"";
   result += String(dateTime)  +suffix;
   //////////////////////////////////////////////
+  Serial.println("printConfiguration#7");
 #if defined(IS_THERE_A_FLASH)
   result += prefix+"useFlash         "+sep+"";
   result += (ci->useFlash ? String("true") : String("false")) +suffix;
@@ -400,6 +407,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->sMTPTLS ? String("true") : String("false"))  + suffix;
   result += prefix+"sMTPPort         "+sep+"";
   result += String(ci->sMTPPort)  + suffix;
+  Serial.println("printConfiguration#8");
   //result += prefix+"sMTPPassword     "+sep+"";
   //result += String(ci->sMTPPassword)  + suffix;
   result += prefix+"sMTPUsername     "+sep+"";
@@ -411,6 +419,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"adminEmail       "+sep+"";
   result += String(ci->adminEmail)  + suffix;
   result += prefix+"sendEmail        "+sep+"";
+  Serial.println("printConfiguration#9");
   result += (ci->sendEmail ? String("true") : String("false"))  + suffix;
   result += prefix+"motionDetectCV   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
@@ -421,6 +430,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"webCaptureOn     "+sep+"";
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
   result += prefix+"frameSize        "+sep+"";
+  Serial.println("printConfiguration#10");
   result += String((unsigned int) ci->frameSize) + ",";
   Serial.print ("printConfiguration:ci->frameSize:");
   Serial.println (ci->frameSize);
@@ -437,6 +447,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += String(ci->lapseTime)+suffix;
   result += prefix+"timeZone         "+sep+"";
   result += ci->timeZone+suffix;
+  Serial.println("printConfiguration#11");
   /*
   struct tm *tm;
   time_t  t;
@@ -454,6 +465,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
     result += "UNKNOWN" +suffix;
   }
   result += "</pre>";
+  Serial.println("printConfiguration#12");
   return (result);
 }
 ////////////////////////////////////////////////////////////////////////////

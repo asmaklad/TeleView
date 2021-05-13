@@ -41,7 +41,7 @@ boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
 String alertTelegram(String msg);
-String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0);
+String sendCapturedImage2Telegram2(String chat_id,String messageText="",uint16_t message_id=0);
 void handleNewMessages(int numNewMessages);
 String formulateKeyboardJson();
 
@@ -64,7 +64,7 @@ String alertTelegram(String msg){
     result= sendCapturedImage2Telegram2(configItems.adminChatIds);
     if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
       bot.sendMessage(configItems.userChatIds, msg,"" );
-      String result= sendCapturedImage2Telegram2(configItems.userChatIds);
+      String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
     }
     Serial.println(result);
     return(result);
@@ -142,7 +142,7 @@ String formulateResolutionInlineKeyBoard(){
             checkMark+
             String(resolutions[i][0])+":"+
             String(resolutions[i][1])+
-            "\",\"callback_data\":\""+String(resolutions[i][0])+"\"";
+            "\",\"callback_data\":\"/"+String(resolutions[i][0])+"\"";
     lkeyboardJson +=  "}]";
     sep=",";
   }
@@ -297,9 +297,9 @@ void handleNewMessages(int numNewMessages) {
               acConfig.ota=AC_OTA_BUILTIN;
             Portal.config(acConfig);
           }
-          bot.sendMessageWithInlineKeyboard(chat_id, 
+          bot.sendMessageWithInlineKeyboard(chat_id,
             "Change settings:",
-            "html", 
+            "html",
             formulateOptionsInlineKeyBoard(),
             message_id
             );
@@ -315,7 +315,7 @@ void handleNewMessages(int numNewMessages) {
       } else {
         String text = bot.messages[i].text;
         String from_name = bot.messages[i].from_name;
-        if (from_name == "") 
+        if (from_name == "")
           from_name = "Guest";
         Serial.println("TEXT:"+text);
         if (bSetLapseMode) {
@@ -327,7 +327,7 @@ void handleNewMessages(int numNewMessages) {
           if(bot.messages[i].type == "channel_post") {
             bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
           } else {
-            String result= sendCapturedImage2Telegram2(chat_id,message_id);
+            String result= sendCapturedImage2Telegram2(chat_id,"",message_id);
             Serial.println("result: "+result);
           }
           Serial.println("handleNewMessages/sendPhoto:END");
@@ -536,7 +536,7 @@ void sendEmailPhoto(camera_fb_t * fb ,String espMessage="Teleview Photo"){
 }
 
 ///////////////////////////////////////////////
-String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
+String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t message_id) {
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
   StaticJsonDocument<2048> doc;
@@ -600,7 +600,10 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
 
   String head ="";
   head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id +"\r\n";
-  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" +String(fb_width)+"x"+String(fb_height)+", "+String(fb->len) +" B\r\n";
+  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" +
+            String(fb_width)+"x"+String(fb_height)+", "+String(fb->len) +" B"+
+            ","+messageText+
+            "\r\n";
   if (message_id>0)
     head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"reply_to_message_id\"; \r\n\r\n" + String(message_id) +"\r\n";
   head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"parse_mode\"; \r\n\r\nMarkdown\r\n";
@@ -716,7 +719,7 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
         configItems.adminEmail.length() >0
         )
     {
-      sendEmailPhoto(fb);
+      sendEmailPhoto(fb,messageText);
     }
   }
   // saving to SD card.
@@ -741,7 +744,7 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
           tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
           tm->tm_hour, tm->tm_min, tm->tm_sec);
         // Path where new picture will be saved in SD Card
-        String path = "/picture" + String(dateTime) +".jpg";
+        String path = "/picture" + String(dateTime) + "_" + messageText+".jpg";
         fs::FS &fs = SD_MMC;
         Serial.printf("Picture file name: %s\n", path.c_str());
         File file = fs.open(path.c_str(), FILE_WRITE);

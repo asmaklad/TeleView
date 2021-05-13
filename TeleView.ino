@@ -50,15 +50,12 @@
                                           //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
-#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
+#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
-#if CONFIG_OV3660_SUPPORT
-int maxRes=FRAMESIZE_QXGA;
-#else
-int maxRes=FRAMESIZE_UXGA;
-#endif
+framesize_t maxRes=MAX_RESOULTION;
+
 //////////////////////////////////////
 String compileDate=String(__DATE__);
 String compileTime=String(__TIME__);
@@ -142,10 +139,12 @@ void setup() {
   config.pixel_format = PIXFORMAT_JPEG;
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){
+    maxRes=MAX_RESOULTION;
     config.frame_size = FRAMESIZE_UXGA;
     config.jpeg_quality = 10;  //0-63 lower number means higher quality
     config.fb_count = 2;
   } else {
+    maxRes=FRAMESIZE_SVGA;
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;  //0-63 lower number means higher quality
     config.fb_count = 1;
@@ -278,7 +277,7 @@ void setup() {
   bot.updateToken(configItems.botTTelegram);
   //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
   bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
-  if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
+  if (configItems.alertALL && configItems.userChatIds.toDouble()>0){
     bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
   }
   Serial.println("I am Alive!!");
@@ -311,13 +310,7 @@ void loop() {
   Serial.println(vPIR );
   */
   if ( configItems.motDetectOn && vPIR==PIR_PIN_ON ) {
-    Serial.println("PIR Motion Detected.");
-    bot.sendMessage(configItems.adminChatIds, "PIR Motion Detected!","" );
-    String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
-    if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-      bot.sendMessage(configItems.userChatIds, "PIR Motion Detected!","" );
-      String result= sendCapturedImage2Telegram2(configItems.userChatIds);
-    }
+    String result= alertTelegram("PIR Motion Detected.");
     Serial.println("result: "+result);
     bMotionDetected=true;
     delay(100);

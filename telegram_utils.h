@@ -59,11 +59,11 @@ int Counter_getNextBufferLen=0;
 ///////////////////////////////////////////////
 String alertTelegram(String msg){
     String result="";
-    Serial.print("AlertMessage:"+msg);
-    bot.sendMessage(configItems.adminChatIds, msg,"" );
-    result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+    Serial.println("AlertMessage:"+msg);
+    //bot.sendMessage(configItems.adminChatIds, msg,"" );
+    result= sendCapturedImage2Telegram2(configItems.adminChatIds,msg);
     if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-      bot.sendMessage(configItems.userChatIds, msg,"" );
+      //bot.sendMessage(configItems.userChatIds, msg,"" );
       String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
     }
     Serial.println(result);

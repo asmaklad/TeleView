@@ -51,6 +51,8 @@
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
 #define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+                                        // to Have OTA Working:
+                                        // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
 //#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
@@ -100,7 +102,7 @@ int consequentChangedFrames=0;
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
-  Serial.setDebugOutput(true);  
+  Serial.setDebugOutput(true);
   esp_log_level_set("*", ESP_LOG_INFO);
   //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
   //esp_log_level_set("wifi", ESP_LOG_WARN);      // enable WARN logs from WiFi stack

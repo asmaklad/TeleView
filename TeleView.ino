@@ -56,6 +56,7 @@
 //#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
+
 framesize_t maxRes=MAX_RESOULTION;
 
 //////////////////////////////////////
@@ -98,10 +99,18 @@ int consequentChangedFrames=0;
 
 // struct tm *startTM; you find it in webPages.h
 
+esp_sleep_wakeup_cause_t print_wakeup_reason();
+
 //****************************************************************//
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
+#ifdef CAMERA_MODEL_M5STACK_PSRAM
+// will hold bat output
+  bat_init();
+  led_init(CAMERA_LED_GPIO);
+  bmm8563_init();
+#endif
   delay (1000);
   Serial.setDebugOutput(true);
   esp_log_level_set("*", ESP_LOG_INFO);
@@ -383,7 +392,29 @@ void loop() {
       alertTelegram("time-lapse tick!");
       bTakePhotoTick=false;
     }
-    Bot_lasttime = millis();
+
+    #ifdef CAMERA_MODEL_M5STACK_PSRAM
+      rtc_date_t date;
+      bmm8563_getTime(&date);
+      Serial.printf("Time: %d/%d/%d %02d:%02d:%-2d\r\n", date.year, date.month, date.day, date.hour, date.minute, date.second);
+      Serial.printf("volt: %d mv\r\n", bat_get_voltage());
+    #endif
+    if (configItems.useDeepSleep && bESPMayGoToSleep){
+      Serial.flush();
+      String extraMessage;
+      if (bMotionDetected){
+        extraMessage="till PIR is active.";
+      }
+      if (bTakePhotoTick){
+        extraMessage="for the next " + String(configItems.lapseTime) + " minutes.";
+      }
+      alertTelegram("ESP is going to sleep "+extraMessage,false);
+      #ifdef CAMERA_MODEL_M5STACK_PSRAM
+        // disable bat output, will wake up after 5 sec, Sleep current is 1~2μA
+        bat_disable_output();
+      #endif
+      esp_deep_sleep_start();
+    }
     #if defined(PIR_PIN)
       if (configItems.useDeepSleep && configItems.motDetectOn) {
         bMotionDetected=true;
@@ -395,28 +426,35 @@ void loop() {
     if (configItems.useDeepSleep && configItems.lapseTime >0){
       bTakePhotoTick=true;
       esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+      #ifdef CAMERA_MODEL_M5STACK_PSRAM
+        esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+        // X sec later will wake up
+        bmm8563_setTimerIRQ(configItems.lapseTime*60);
+      #endif
       bESPMayGoToSleep=true;
       //alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes",true);
     }
-    if (configItems.useDeepSleep && bESPMayGoToSleep){
-      Serial.flush();
-      String extraMessage;
-      if (bMotionDetected){
-        extraMessage="till PIR is active.";
-      }
-      if (bTakePhotoTick){
-        extraMessage="for the next " + String(configItems.lapseTime) + " minutes.";
-      }
-      alertTelegram("ESP is going to sleep "+extraMessage,true);
-      esp_deep_sleep_start();
-    }
+    Bot_lasttime = millis();
   }
 }
 //****************************************************************//
 
-
 ////////////////////////////////////////////////////////////////////////////
-void print_wakeup_reason(){
+#ifdef CAMERA_MODEL_M5STACK_WIDE
+void led_breathe_test() {
+  for (int16_t i = 0; i < 1024; i++) {
+    led_brightness(i);
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+
+  for (int16_t i = 1023; i >= 0; i--) {
+    led_brightness(i);
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+}
+#endif
+////////////////////////////////////////////////////////////////////////////
+esp_sleep_wakeup_cause_t print_wakeup_reason(){
   esp_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -430,6 +468,7 @@ void print_wakeup_reason(){
     case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
     default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
+  return (wakeup_reason);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -482,6 +521,20 @@ boolean applyConfigItem (config_item* ci) {
   //*/
   // non configurable params:
   /*
+  set_special_effect()
+    0 – No Effect
+    1 – Negative
+    2 – Grayscale
+    3 – Red Tint
+    4 – Green Tint
+    5 – Blue Tint
+    6 – Sepia
+  set_wb_mode()
+    0 – Auto
+    1 – Sunny
+    2 – Cloudy
+    3 – Office
+    4 – Home
   https://github.com/espressif/esp32-camera/blob/ec14f1d6f718571d8a7d2e537e03cebcc05e0ac8/driver/include/sensor.h
   typedef struct {
     framesize_t framesize;//0 - 10

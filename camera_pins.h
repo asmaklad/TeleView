@@ -81,6 +81,25 @@
 #define PCLK_GPIO_NUM     21
 #define MAX_RESOULTION    FRAMESIZE_QXGA
 
+//#define LED_PIN             2
+//#define BAT_OUTPUT_HOLD_PIN 33
+//#define BAT_ADC_PIN         38
+
+#define BM8563_SDA_PIN      12
+#define BM8563_SCL_PIN      14
+
+#define CAMERA_LED_GPIO 2
+#define BAT_OUTPUT_HOLD_PIN 33
+#define BAT_ADC_PIN 38
+#define Ext_PIN_1 4
+#define Ext_PIN_2 13
+#include "Arduino.h"
+#include "freertos/FreeRTOS.h"
+#include <camera_pins.h>
+#include "battery.h"
+#include "led.h"
+#include "bmm8563.h"
+
 #elif defined(CAMERA_MODEL_M5STACK_WIDE)
 #define PWDN_GPIO_NUM     -1
 #define RESET_GPIO_NUM    15

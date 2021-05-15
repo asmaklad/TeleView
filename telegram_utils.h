@@ -352,6 +352,7 @@ void handleNewMessages(int numNewMessages) {
           bSetLapseMode=true;
           bPrintOptions=false;
         }else if(text == "/moreSettings") {
+          configItems.useDeepSleep=false;
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
           bInlineKeyboardExtraOptions=true;

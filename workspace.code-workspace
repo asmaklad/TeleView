@@ -1,0 +1,43 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "210424-064024-ttgo-t1",
+			"path": "..\\..\\..\\PlatformIO\\Projects\\210424-064024-ttgo-t1"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"regex": "cpp",
+			"xlocale": "cpp",
+			"xlocmes": "cpp",
+			"cmath": "cpp",
+			"random": "cpp",
+			"functional": "cpp",
+			"xutility": "cpp",
+			"xiosbase": "cpp",
+			"chrono": "cpp",
+			"optional": "cpp",
+			"system_error": "cpp",
+			"type_traits": "cpp",
+			"xtr1common": "cpp",
+			"ratio": "cpp",
+			"array": "cpp",
+			"tuple": "cpp",
+			"utility": "cpp",
+			"xstring": "cpp",
+			"string_view": "cpp",
+			"xlocinfo": "cpp",
+			"string": "cpp",
+			"deque": "cpp",
+			"list": "cpp",
+			"queue": "cpp",
+			"stack": "cpp",
+			"vector": "cpp",
+			"xhash": "cpp",
+			"xtree": "cpp"
+		}
+	}
+}

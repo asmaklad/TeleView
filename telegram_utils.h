@@ -40,7 +40,7 @@ String keyboardJson = "" ;
 boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
-String alertTelegram(String msg);
+String alertTelegram(String msg,boolean messageOnly=false);
 String sendCapturedImage2Telegram2(String chat_id,String messageText="",uint16_t message_id=0);
 void handleNewMessages(int numNewMessages);
 String formulateKeyboardJson();
@@ -57,14 +57,20 @@ int Counter_isMoreDataAvailable=0;
 int Counter_getNextBuffer=0;
 int Counter_getNextBufferLen=0;
 ///////////////////////////////////////////////
-String alertTelegram(String msg){
+String alertTelegram(String msg,boolean messageOnly){
     String result="";
     Serial.println("AlertMessage:"+msg);
-    //bot.sendMessage(configItems.adminChatIds, msg,"" );
-    result= sendCapturedImage2Telegram2(configItems.adminChatIds,msg);
+    if (messageOnly){
+      bot.sendMessage(configItems.adminChatIds, msg,"" );
+    }else{
+      result= sendCapturedImage2Telegram2(configItems.adminChatIds,msg);
+    }
     if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-      //bot.sendMessage(configItems.userChatIds, msg,"" );
-      String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
+      if (messageOnly){
+        bot.sendMessage(configItems.userChatIds, msg,"" );
+      }else{
+        String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
+      }
     }
     Serial.println(result);
     return(result);
@@ -368,6 +374,7 @@ void handleNewMessages(int numNewMessages) {
           welcome += "\t motionDetectVC | MotionDetect by Vision not PIR -no DeepSleep\n";
           welcome += "\t alertALL     | MotionDetect/timelapse to all chatIds not just Admin\n";
           welcome += "\t saveToSD     | Save Photos to SD also\n";
+          welcome += "\t sendEmail    | Alert by Email also\n";
           welcome += "\t useDeepSleep | goto to deep sleep on MotionDetct and timeLapse\n";
           welcome += "\t useBuzzer    | trigger buzzer on motion detect\n";
           welcome += "\t webCaptureOn | enables and disbales the /capture.jpg url\n";

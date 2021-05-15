@@ -102,6 +102,7 @@ int consequentChangedFrames=0;
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
+  delay (1000);
   Serial.setDebugOutput(true);
   esp_log_level_set("*", ESP_LOG_INFO);
   //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
@@ -379,28 +380,35 @@ void loop() {
       Serial.println("got response#3");
     }
     if (bTakePhotoTick){
-      alertTelegram("Tick!");
+      alertTelegram("time-lapse tick!");
       bTakePhotoTick=false;
     }
     Bot_lasttime = millis();
-    if (configItems.useDeepSleep && bESPMayGoToSleep){
-      Serial.flush();
-      alertTelegram("Going to sleep now!");
-      esp_deep_sleep_start();
-    }
     #if defined(PIR_PIN)
       if (configItems.useDeepSleep && configItems.motDetectOn) {
         bMotionDetected=true;
         esp_sleep_enable_ext0_wakeup((gpio_num_t)PIR_PIN,PIR_PIN_ON); //1 = High, 0 = Low
         bESPMayGoToSleep=true;
-        alertTelegram("ESP is going to sleep till PIR is active." );
+        //alertTelegram("ESP is going to sleep till PIR is active.",true );
       }
     #endif
     if (configItems.useDeepSleep && configItems.lapseTime >0){
       bTakePhotoTick=true;
       esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
       bESPMayGoToSleep=true;
-      alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes");
+      //alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes",true);
+    }
+    if (configItems.useDeepSleep && bESPMayGoToSleep){
+      Serial.flush();
+      String extraMessage;
+      if (bMotionDetected){
+        extraMessage="till PIR is active.";
+      }
+      if (bTakePhotoTick){
+        extraMessage="for the next " + String(configItems.lapseTime) + " minutes.";
+      }
+      alertTelegram("ESP is going to sleep "+extraMessage,true);
+      esp_deep_sleep_start();
     }
   }
 }
@@ -436,11 +444,80 @@ boolean applyConfigItem (config_item* ci) {
   s->set_framesize(s, ci->frameSize);  // UXGA|SXGA|XGA|SVGA|VGA|CIF|QVGA|HQVGA|QQVGA
   s->set_hmirror(s, ci->hMirror);
   s->set_vflip(s, ci->vFlip);
+  //
+  //s->set_wb_mode(s,ci->set_whitebal);
+  s->set_brightness(s,ci->set_brightness);
+  s->set_contrast(s,ci->set_contrast);
+  s->set_saturation(s,ci->set_saturation);
+  s->set_quality(s,ci->jpegQuality);
+  //
+  Serial.printf("* > s->status.scale:%d\n",s->status.scale);
+  Serial.printf("* > s->status.binning:%d\n",s->status.binning);
+  Serial.printf("* > s->status.quality:%d\n",s->status.quality);					//0 - 63
+  Serial.printf("* > s->status.brightness:%d\n",s->status.brightness);			//-2 - 2
+  Serial.printf("* > s->status.contrast:%d\n",s->status.contrast);				//-2 - 2
+  Serial.printf("* > s->status.saturation:%d\n",s->status.saturation);			//-2 - 2
+  Serial.printf("* > s->status.sharpness:%d\n",s->status.sharpness);				//-2 - 2
+  Serial.printf("* > s->status.denoise:%d\n",s->status.denoise);
+  Serial.printf("* > s->status.special_effect:%d\n",s->status.special_effect);	//0 - 6
+  Serial.printf("* > s->status.wb_mode:%d\n",s->status.wb_mode); 					//0 - 4
+  Serial.printf("* > s->status.awb:%d\n",s->status.awb);
+  Serial.printf("* > s->status.awb_gain:%d\n",s->status.awb_gain);
+  Serial.printf("* > s->status.aec:%d\n",s->status.aec);
+  Serial.printf("* > s->status.aec2:%d\n",s->status.aec2);
+  Serial.printf("* > s->status.ae_level:%d\n",s->status.ae_level);				//-2 - 2
+  Serial.printf("* > s->status.aec_value:%d\n",s->status.aec_value);				//0 - 1200
+  Serial.printf("* > s->status.agc:%d\n",s->status.agc);
+  Serial.printf("* > s->status.agc_gain:%d\n",s->status.agc_gain);				//0 - 30
+  Serial.printf("* > s->status.gainceiling:%d\n",s->status.gainceiling);			//0 - 6
+  Serial.printf("* > s->status.bpc:%d\n",s->status.bpc);
+  Serial.printf("* > s->status.wpc:%d\n",s->status.wpc);
+  Serial.printf("* > s->status.raw_gma:%d\n",s->status.raw_gma);
+  Serial.printf("* > s->status.lenc:%d\n",s->status.lenc);
+  Serial.printf("* > s->status.hmirror:%d\n",s->status.hmirror);
+  Serial.printf("* > s->status.vflip:%d\n",s->status.vflip);
+  Serial.printf("* > s->status.dcw:%d\n",s->status.dcw);
+  Serial.printf("* > s->status.colorbar:%d\n",s->status.colorbar);
+  delay(500);
+  //*/
   // non configurable params:
+  /*
+  https://github.com/espressif/esp32-camera/blob/ec14f1d6f718571d8a7d2e537e03cebcc05e0ac8/driver/include/sensor.h
+  typedef struct {
+    framesize_t framesize;//0 - 10
+    bool scale;
+    bool binning;
+    uint8_t quality;//0 - 63
+    int8_t brightness;//-2 - 2
+    int8_t contrast;//-2 - 2
+    int8_t saturation;//-2 - 2
+    int8_t sharpness;//-2 - 2
+    uint8_t denoise;
+    uint8_t special_effect;//0 - 6
+    uint8_t wb_mode;//0 - 4
+    uint8_t awb;
+    uint8_t awb_gain;
+    uint8_t aec;
+    uint8_t aec2;
+    int8_t ae_level;//-2 - 2
+    uint16_t aec_value;//0 - 1200
+    uint8_t agc;
+    uint8_t agc_gain;//0 - 30
+    uint8_t gainceiling;//0 - 6
+    uint8_t bpc;
+    uint8_t wpc;
+    uint8_t raw_gma;
+    uint8_t lenc;
+    uint8_t hmirror;
+    uint8_t vflip;
+    uint8_t dcw;
+    uint8_t colorbar;
+} camera_status_t;
+*/
     //s->set_gain_ctrl(s, 0); // auto gain off (1 or 0)
     //s->set_exposure_ctrl(s, 0); // auto exposure off (1 or 0)
     //s->set_agc_gain(s, 0); // set gain manually (0 - 30)
-    //s->set_aec_value(s, 600); // set exposure manually (0-1200)    
+    //s->set_aec_value(s, 600); // set exposure manually (0-1200)
     // s->set_brightness(s, 0); // (-2 to 2) - set brightness
     // s->set_awb_gain(s, 0); // Auto White Balance?
     // s->set_lenc(s, 0); // lens correction? (1 or 0)

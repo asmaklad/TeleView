@@ -75,7 +75,7 @@ int matchResolutionText(String text){
   int result=-1;
   Serial.println("TESTX:"+text);
   for (int i=0;i<=maxRes;i++){
-    Serial.println("compareTo:"+String(resolutions[i][0]));
+    Serial.println("compareTo:/"+String(resolutions[i][0]));
     if ((text.compareTo(String("/"+resolutions[i][0])))==0){
       result=i;
       break;
@@ -92,6 +92,11 @@ struct config_item {
   framesize_t frameSize;
   boolean hMirror;
   boolean vFlip;
+  int set_whitebal;
+  int set_saturation;
+  int set_contrast;
+  int set_brightness;
+  int jpegQuality;
   boolean sMTPTLS;
   int sMTPPort;
   String sMTPPassword;
@@ -120,6 +125,11 @@ struct config_item {
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
+  .set_whitebal = 1,
+  .set_saturation = 0,
+  .set_contrast = 0,
+  .set_brightness = 0,
+  .jpegQuality = 12,
   .sMTPTLS = true,
   .sMTPPort = 0,
   .sMTPPassword = "",
@@ -164,6 +174,11 @@ void deleteConfiguration(){
     prefs.remove("frameSize");
     prefs.remove("hMirror");
     prefs.remove("vFlip");
+    prefs.remove("set_whitebal");
+    prefs.remove("set_saturation");
+    prefs.remove("set_contrast");
+    prefs.remove("set_brightness");
+    prefs.remove("jpegQuality");
     prefs.remove("sMTPTLS");
     prefs.remove("sMTPPort");
     prefs.remove("sMTPPassword");
@@ -208,6 +223,11 @@ config_item loadConfiguration() {
     ci.frameSize = (framesize_t) prefs.getUInt("frameSize",configItems.frameSize);
     ci.hMirror = prefs.getBool("hMirror",configItems.hMirror);
     ci.vFlip = prefs.getBool("vFlip",configItems.vFlip);
+    ci.set_whitebal = prefs.getInt("set_whitebal",configItems.set_whitebal);
+    ci.set_saturation = prefs.getInt("set_saturation",configItems.set_saturation);
+    ci.set_contrast = prefs.getInt("set_contrast",configItems.set_contrast);
+    ci.set_brightness = prefs.getInt("set_brightness",configItems.set_brightness);
+    ci.jpegQuality = prefs.getInt("jpegQuality",configItems.jpegQuality);
 
     ci.sMTPTLS = prefs.getBool("sMTPTLS",configItems.sMTPTLS);
     ci.sMTPPort = prefs.getInt("sMTPPort",configItems.sMTPPort);
@@ -257,6 +277,17 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("hMirror",ci->hMirror); bDirty=true; }
     if (prefs.getBool("vFlip")!=ci->vFlip)
       { prefs.putBool("vFlip",ci->vFlip); bDirty=true; }
+
+    if (prefs.getInt("set_whitebal")!=ci->set_whitebal)
+      { prefs.putInt("set_whitebal",ci->set_whitebal); bDirty=true; }
+    if (prefs.getInt("set_saturation")!=ci->set_saturation)
+      { prefs.putInt("set_saturation",ci->set_saturation); bDirty=true; }
+    if (prefs.getInt("set_contrast")!=ci->set_contrast)
+      { prefs.putInt("set_contrast",ci->set_contrast); bDirty=true; }
+    if (prefs.getInt("set_brightness")!=ci->set_brightness)
+      { prefs.putInt("set_brightness",ci->set_brightness); bDirty=true; }
+    if (prefs.getInt("jpegQuality")!=ci->jpegQuality)
+      { prefs.putInt("jpegQuality",ci->jpegQuality); bDirty=true; }
     //
     if (prefs.getBool("sMTPTLS")!=ci->sMTPTLS)
       { prefs.putBool("sMTPTLS",ci->sMTPTLS); bDirty=true; }
@@ -403,11 +434,20 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
+  //result += prefix+"set_whitebal     "+sep+"";
+  //result += String(ci->set_whitebal)  + suffix;
+  result += prefix+"set_saturation   "+sep+"";
+  result += String(ci->set_saturation)  + suffix;
+  result += prefix+"set_contrast     "+sep+"";
+  result += String(ci->set_contrast)  + suffix;
+  result += prefix+"set_brightness   "+sep+"";
+  result += String(ci->set_brightness)  + suffix;
+  result += prefix+"jpegQuality      "+sep+"";
+  result += String(ci->jpegQuality)  + suffix;
   result += prefix+"sMTPTLS          "+sep+"";
   result += (ci->sMTPTLS ? String("true") : String("false"))  + suffix;
   result += prefix+"sMTPPort         "+sep+"";
   result += String(ci->sMTPPort)  + suffix;
-  
   //result += prefix+"sMTPPassword     "+sep+"";
   //result += String(ci->sMTPPassword)  + suffix;
   result += prefix+"sMTPUsername     "+sep+"";

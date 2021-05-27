@@ -59,6 +59,9 @@ int Counter_getNextBufferLen=0;
 ///////////////////////////////////////////////
 String alertTelegram(String msg,boolean messageOnly){
     String result="";
+    #ifdef CAMERA_MODEL_M5STACK_PSRAM
+      msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
+    #endif
     Serial.println("AlertMessage:"+msg);
     if (messageOnly){
       bot.sendMessage(configItems.adminChatIds, msg,"" );
@@ -333,7 +336,11 @@ void handleNewMessages(int numNewMessages) {
           if(bot.messages[i].type == "channel_post") {
             bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
           } else {
-            String result= sendCapturedImage2Telegram2(chat_id,"",message_id);
+            String msg="Photo Request";
+            #ifdef CAMERA_MODEL_M5STACK_PSRAM
+              msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
+            #endif
+            String result= sendCapturedImage2Telegram2(chat_id,msg,message_id);
             Serial.println("result: "+result);
           }
           Serial.println("handleNewMessages/sendPhoto:END");

@@ -50,10 +50,10 @@
                                           //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
                                         // to Have OTA Working:
                                         // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
-//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
+#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 
@@ -281,10 +281,22 @@ void setup() {
   ///////////////////////////////////
   daylightOffset_sec=0;
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  #ifdef CAMERA_MODEL_M5STACK_PSRAM
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)){
+      Serial.println("Failed to obtain time");
+      return;
+    }
+    _rtc_data_t  timeToSet;
+    timeToSet.year=timeinfo.tm_year+1900;
+    timeToSet.month=timeinfo.tm_mon+1;
+    timeToSet.day=timeinfo.tm_mday;
+    timeToSet.hour=timeinfo.tm_hour;
+    timeToSet.second=timeinfo.tm_sec;
+    bmm8563_setTime(&timeToSet);
+  #endif
   ///////////////////////////////////
-#ifndef CAMERA_MODEL_M5STACK_WIDE
   botClient.setInsecure();
-#endif
   //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.updateToken(configItems.botTTelegram);
   //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
@@ -392,13 +404,39 @@ void loop() {
       alertTelegram("time-lapse tick!");
       bTakePhotoTick=false;
     }
-
+    /////////////////////////////////////////////
     #ifdef CAMERA_MODEL_M5STACK_PSRAM
       rtc_date_t date;
       bmm8563_getTime(&date);
       Serial.printf("Time: %d/%d/%d %02d:%02d:%-2d\r\n", date.year, date.month, date.day, date.hour, date.minute, date.second);
       Serial.printf("volt: %d mv\r\n", bat_get_voltage());
+      Serial.printf("ADC: %d mv\r\n", bat_get_adc_raw());
     #endif
+    /////////////////////////////////////////////
+    #if defined(PIR_PIN)
+      if (configItems.useDeepSleep && configItems.motDetectOn) {
+        bMotionDetected=true;
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)PIR_PIN,PIR_PIN_ON); //1 = High, 0 = Low
+        bESPMayGoToSleep=true;
+        //alertTelegram("ESP is going to sleep till PIR is active.",true );
+      }
+    #endif
+    /////////////////////////////////////////////
+    if (configItems.useDeepSleep && configItems.lapseTime >0){
+      bTakePhotoTick=true;
+      #ifdef CAMERA_MODEL_M5STACK_PSRAM
+        // esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+        // X sec later will wake up
+        Serial.println("bmm8563_setTimerIRQ");
+        bmm8563_setTimerIRQ(configItems.lapseTime*60);
+      #endif
+      Serial.println("esp_sleep_enable_timer_wakeup");
+      //esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+      esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+      bESPMayGoToSleep=true;
+      //alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes",true);
+    }
+    /////////////////////////////////////////////
     if (configItems.useDeepSleep && bESPMayGoToSleep){
       Serial.flush();
       String extraMessage;
@@ -411,36 +449,21 @@ void loop() {
       alertTelegram("ESP is going to sleep "+extraMessage,false);
       #ifdef CAMERA_MODEL_M5STACK_PSRAM
         // disable bat output, will wake up after 5 sec, Sleep current is 1~2μA
+        Serial.println("bat_disable_output");
         bat_disable_output();
       #endif
+      Serial.println("esp_deep_sleep_start");
+      esp_wifi_stop();
       esp_deep_sleep_start();
     }
-    #if defined(PIR_PIN)
-      if (configItems.useDeepSleep && configItems.motDetectOn) {
-        bMotionDetected=true;
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)PIR_PIN,PIR_PIN_ON); //1 = High, 0 = Low
-        bESPMayGoToSleep=true;
-        //alertTelegram("ESP is going to sleep till PIR is active.",true );
-      }
-    #endif
-    if (configItems.useDeepSleep && configItems.lapseTime >0){
-      bTakePhotoTick=true;
-      esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
-      #ifdef CAMERA_MODEL_M5STACK_PSRAM
-        esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
-        // X sec later will wake up
-        bmm8563_setTimerIRQ(configItems.lapseTime*60);
-      #endif
-      bESPMayGoToSleep=true;
-      //alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes",true);
-    }
+    /////////////////////////////////////////////
     Bot_lasttime = millis();
   }
 }
 //****************************************************************//
 
 ////////////////////////////////////////////////////////////////////////////
-#ifdef CAMERA_MODEL_M5STACK_WIDE
+#ifdef CAMERA_MODEL_M5STACK_PSRAM
 void led_breathe_test() {
   for (int16_t i = 0; i < 1024; i++) {
     led_brightness(i);

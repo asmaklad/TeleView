@@ -46,13 +46,19 @@
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
 //#define CAMERA_MODEL_ESP_EYE
-//#define CAMERA_MODEL_M5STACK_PSRAM
+//#define CAMERA_MODEL_M5STACK_PSRAM        // Board definition Boards->ESP32 Arduino->"M5Stack Timer-CAM"
+                                          //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
 //#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+                                        // to Have OTA Working:
+                                        // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
 #define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
+
+framesize_t maxRes=MAX_RESOULTION;
+
 //////////////////////////////////////
 String compileDate=String(__DATE__);
 String compileTime=String(__TIME__);
@@ -93,11 +99,20 @@ int consequentChangedFrames=0;
 
 // struct tm *startTM; you find it in webPages.h
 
+esp_sleep_wakeup_cause_t print_wakeup_reason();
+
 //****************************************************************//
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
-  Serial.setDebugOutput(true);  
+#ifdef CAMERA_MODEL_M5STACK_PSRAM
+// will hold bat output
+  bat_init();
+  led_init(CAMERA_LED_GPIO);
+  bmm8563_init();
+#endif
+  delay (1000);
+  Serial.setDebugOutput(true);
   esp_log_level_set("*", ESP_LOG_INFO);
   //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
   //esp_log_level_set("wifi", ESP_LOG_WARN);      // enable WARN logs from WiFi stack
@@ -136,10 +151,12 @@ void setup() {
   config.pixel_format = PIXFORMAT_JPEG;
   //init with high specs to pre-allocate larger buffers
   if(psramFound()){
+    maxRes=MAX_RESOULTION;
     config.frame_size = FRAMESIZE_UXGA;
     config.jpeg_quality = 10;  //0-63 lower number means higher quality
     config.fb_count = 2;
   } else {
+    maxRes=FRAMESIZE_SVGA;
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;  //0-63 lower number means higher quality
     config.fb_count = 1;
@@ -264,13 +281,27 @@ void setup() {
   ///////////////////////////////////
   daylightOffset_sec=0;
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  #ifdef CAMERA_MODEL_M5STACK_PSRAM
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)){
+      Serial.println("Failed to obtain time");
+      return;
+    }
+    _rtc_data_t  timeToSet;
+    timeToSet.year=timeinfo.tm_year+1900;
+    timeToSet.month=timeinfo.tm_mon+1;
+    timeToSet.day=timeinfo.tm_mday;
+    timeToSet.hour=timeinfo.tm_hour;
+    timeToSet.second=timeinfo.tm_sec;
+    bmm8563_setTime(&timeToSet);
+  #endif
   ///////////////////////////////////
   botClient.setInsecure();
   //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.updateToken(configItems.botTTelegram);
   //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
   bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
-  if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
+  if (configItems.alertALL && configItems.userChatIds.toDouble()>0){
     bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
   }
   Serial.println("I am Alive!!");
@@ -303,13 +334,7 @@ void loop() {
   Serial.println(vPIR );
   */
   if ( configItems.motDetectOn && vPIR==PIR_PIN_ON ) {
-    Serial.println("PIR Motion Detected.");
-    bot.sendMessage(configItems.adminChatIds, "PIR Motion Detected!","" );
-    String result= sendCapturedImage2Telegram2(configItems.adminChatIds);
-    if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-      bot.sendMessage(configItems.userChatIds, "PIR Motion Detected!","" );
-      String result= sendCapturedImage2Telegram2(configItems.userChatIds);
-    }
+    String result= alertTelegram("PIR Motion Detected.");
     Serial.println("result: "+result);
     bMotionDetected=true;
     delay(100);
@@ -376,36 +401,83 @@ void loop() {
       Serial.println("got response#3");
     }
     if (bTakePhotoTick){
-      alertTelegram("Tick!");
+      alertTelegram("time-lapse tick!");
       bTakePhotoTick=false;
     }
-    Bot_lasttime = millis();
-    if (configItems.useDeepSleep && bESPMayGoToSleep){
-      Serial.flush();
-      alertTelegram("Going to sleep now!");
-      esp_deep_sleep_start();
-    }
+    /////////////////////////////////////////////
+    #ifdef CAMERA_MODEL_M5STACK_PSRAM
+      rtc_date_t date;
+      bmm8563_getTime(&date);
+      Serial.printf("Time: %d/%d/%d %02d:%02d:%-2d\r\n", date.year, date.month, date.day, date.hour, date.minute, date.second);
+      Serial.printf("volt: %d mv\r\n", bat_get_voltage());
+      Serial.printf("ADC: %d mv\r\n", bat_get_adc_raw());
+    #endif
+    /////////////////////////////////////////////
     #if defined(PIR_PIN)
       if (configItems.useDeepSleep && configItems.motDetectOn) {
         bMotionDetected=true;
         esp_sleep_enable_ext0_wakeup((gpio_num_t)PIR_PIN,PIR_PIN_ON); //1 = High, 0 = Low
         bESPMayGoToSleep=true;
-        alertTelegram("ESP is going to sleep till PIR is active." );
+        //alertTelegram("ESP is going to sleep till PIR is active.",true );
       }
     #endif
+    /////////////////////////////////////////////
     if (configItems.useDeepSleep && configItems.lapseTime >0){
       bTakePhotoTick=true;
+      #ifdef CAMERA_MODEL_M5STACK_PSRAM
+        // esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
+        // X sec later will wake up
+        Serial.println("bmm8563_setTimerIRQ");
+        bmm8563_setTimerIRQ(configItems.lapseTime*60);
+      #endif
+      Serial.println("esp_sleep_enable_timer_wakeup");
+      //esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
       esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
       bESPMayGoToSleep=true;
-      alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes");
+      //alertTelegram("Setup ESP32 to sleep for every " + String(configItems.lapseTime) + " minutes",true);
     }
+    /////////////////////////////////////////////
+    if (configItems.useDeepSleep && bESPMayGoToSleep){
+      Serial.flush();
+      String extraMessage;
+      if (bMotionDetected){
+        extraMessage="till PIR is active.";
+      }
+      if (bTakePhotoTick){
+        extraMessage="for the next " + String(configItems.lapseTime) + " minutes.";
+      }
+      alertTelegram("ESP is going to sleep "+extraMessage,false);
+      #ifdef CAMERA_MODEL_M5STACK_PSRAM
+        // disable bat output, will wake up after 5 sec, Sleep current is 1~2μA
+        Serial.println("bat_disable_output");
+        bat_disable_output();
+      #endif
+      Serial.println("esp_deep_sleep_start");
+      esp_wifi_stop();
+      esp_deep_sleep_start();
+    }
+    /////////////////////////////////////////////
+    Bot_lasttime = millis();
   }
 }
 //****************************************************************//
 
-
 ////////////////////////////////////////////////////////////////////////////
-void print_wakeup_reason(){
+#ifdef CAMERA_MODEL_M5STACK_PSRAM
+void led_breathe_test() {
+  for (int16_t i = 0; i < 1024; i++) {
+    led_brightness(i);
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+
+  for (int16_t i = 1023; i >= 0; i--) {
+    led_brightness(i);
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+}
+#endif
+////////////////////////////////////////////////////////////////////////////
+esp_sleep_wakeup_cause_t print_wakeup_reason(){
   esp_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -419,6 +491,7 @@ void print_wakeup_reason(){
     case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
     default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
+  return (wakeup_reason);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -433,11 +506,94 @@ boolean applyConfigItem (config_item* ci) {
   s->set_framesize(s, ci->frameSize);  // UXGA|SXGA|XGA|SVGA|VGA|CIF|QVGA|HQVGA|QQVGA
   s->set_hmirror(s, ci->hMirror);
   s->set_vflip(s, ci->vFlip);
+  //
+  //s->set_wb_mode(s,ci->set_whitebal);
+  s->set_brightness(s,ci->set_brightness);
+  s->set_contrast(s,ci->set_contrast);
+  s->set_saturation(s,ci->set_saturation);
+  s->set_quality(s,ci->jpegQuality);
+  //
+  Serial.printf("* > s->status.scale:%d\n",s->status.scale);
+  Serial.printf("* > s->status.binning:%d\n",s->status.binning);
+  Serial.printf("* > s->status.quality:%d\n",s->status.quality);					//0 - 63
+  Serial.printf("* > s->status.brightness:%d\n",s->status.brightness);			//-2 - 2
+  Serial.printf("* > s->status.contrast:%d\n",s->status.contrast);				//-2 - 2
+  Serial.printf("* > s->status.saturation:%d\n",s->status.saturation);			//-2 - 2
+  Serial.printf("* > s->status.sharpness:%d\n",s->status.sharpness);				//-2 - 2
+  Serial.printf("* > s->status.denoise:%d\n",s->status.denoise);
+  Serial.printf("* > s->status.special_effect:%d\n",s->status.special_effect);	//0 - 6
+  Serial.printf("* > s->status.wb_mode:%d\n",s->status.wb_mode); 					//0 - 4
+  Serial.printf("* > s->status.awb:%d\n",s->status.awb);
+  Serial.printf("* > s->status.awb_gain:%d\n",s->status.awb_gain);
+  Serial.printf("* > s->status.aec:%d\n",s->status.aec);
+  Serial.printf("* > s->status.aec2:%d\n",s->status.aec2);
+  Serial.printf("* > s->status.ae_level:%d\n",s->status.ae_level);				//-2 - 2
+  Serial.printf("* > s->status.aec_value:%d\n",s->status.aec_value);				//0 - 1200
+  Serial.printf("* > s->status.agc:%d\n",s->status.agc);
+  Serial.printf("* > s->status.agc_gain:%d\n",s->status.agc_gain);				//0 - 30
+  Serial.printf("* > s->status.gainceiling:%d\n",s->status.gainceiling);			//0 - 6
+  Serial.printf("* > s->status.bpc:%d\n",s->status.bpc);
+  Serial.printf("* > s->status.wpc:%d\n",s->status.wpc);
+  Serial.printf("* > s->status.raw_gma:%d\n",s->status.raw_gma);
+  Serial.printf("* > s->status.lenc:%d\n",s->status.lenc);
+  Serial.printf("* > s->status.hmirror:%d\n",s->status.hmirror);
+  Serial.printf("* > s->status.vflip:%d\n",s->status.vflip);
+  Serial.printf("* > s->status.dcw:%d\n",s->status.dcw);
+  Serial.printf("* > s->status.colorbar:%d\n",s->status.colorbar);
+  delay(500);
+  //*/
   // non configurable params:
+  /*
+  set_special_effect()
+    0 – No Effect
+    1 – Negative
+    2 – Grayscale
+    3 – Red Tint
+    4 – Green Tint
+    5 – Blue Tint
+    6 – Sepia
+  set_wb_mode()
+    0 – Auto
+    1 – Sunny
+    2 – Cloudy
+    3 – Office
+    4 – Home
+  https://github.com/espressif/esp32-camera/blob/ec14f1d6f718571d8a7d2e537e03cebcc05e0ac8/driver/include/sensor.h
+  typedef struct {
+    framesize_t framesize;//0 - 10
+    bool scale;
+    bool binning;
+    uint8_t quality;//0 - 63
+    int8_t brightness;//-2 - 2
+    int8_t contrast;//-2 - 2
+    int8_t saturation;//-2 - 2
+    int8_t sharpness;//-2 - 2
+    uint8_t denoise;
+    uint8_t special_effect;//0 - 6
+    uint8_t wb_mode;//0 - 4
+    uint8_t awb;
+    uint8_t awb_gain;
+    uint8_t aec;
+    uint8_t aec2;
+    int8_t ae_level;//-2 - 2
+    uint16_t aec_value;//0 - 1200
+    uint8_t agc;
+    uint8_t agc_gain;//0 - 30
+    uint8_t gainceiling;//0 - 6
+    uint8_t bpc;
+    uint8_t wpc;
+    uint8_t raw_gma;
+    uint8_t lenc;
+    uint8_t hmirror;
+    uint8_t vflip;
+    uint8_t dcw;
+    uint8_t colorbar;
+} camera_status_t;
+*/
     //s->set_gain_ctrl(s, 0); // auto gain off (1 or 0)
     //s->set_exposure_ctrl(s, 0); // auto exposure off (1 or 0)
     //s->set_agc_gain(s, 0); // set gain manually (0 - 30)
-    //s->set_aec_value(s, 600); // set exposure manually (0-1200)    
+    //s->set_aec_value(s, 600); // set exposure manually (0-1200)
     // s->set_brightness(s, 0); // (-2 to 2) - set brightness
     // s->set_awb_gain(s, 0); // Auto White Balance?
     // s->set_lenc(s, 0); // lens correction? (1 or 0)

@@ -26,6 +26,7 @@
     - [CheckBoxes:](#checkboxes)
     - [ComboBoxes:](#comboboxes)
     - [Buttons:](#buttons)
+  - [Sending Emails](#sending-emails)
 ## Main features and snapshots
 * Send Photo through telegram upon request. 
 <img src="./docs/Photo_sendPhoto.jpg" alt="/sendPhoto" width="40%"/>
@@ -60,7 +61,9 @@
 * A deep sleep mode is possible with time-lapse and PIR motiion detection for battery operated scenarios.
 * Usual case , only the admin will be notified of the eventd "Alive", "motion detection" and "time-lapse" , but you can also enable alerting of the userId.
 * Supports multiple Admins and multiple Users through Telegram Groups (explained further below).
-* OTA Features
+* OTA Features (In progress)
+* Send Email With Photos
+* Supports OV2640 & OV3660 resolutions
 
 ## Specific Features per Type of Board:
 * toggle flash when taking a photo : For the AI_Thinker board, there is a very strong led on the same side as camera, which could be used as a flash.
@@ -76,7 +79,8 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 ## Tested Boards:
 * AI-Thinker ESP32-CAM Board
 * TTGO T1 Board
-* M5 CAM
+* M5STACK CAM
+* M5Stack Camera-Timer-X/F
 
 ## Required Installation:
 * Arduino IDE
@@ -95,18 +99,20 @@ Adafruit GFX Library  | 1.10.7
 Adafruit  BusIO | 1.7.3
 Adafruit  SSD1306 | 2.4.4
 AutoConnect | 1.2.2
+ESP Mail Client(Mobizt) | 1.1.7
 
 
 ## User Guide:
-### Compile and Upload 
+### Compile and Upload
  This project is Compiled and uploaded through ArduinoIDE, use the normal procedure for installing ESP32 in ArduinoIDE and install the following Libs:
 *    AutoConnect
-*    ArduinoJson 
+*    ArduinoJson
 *    Adafruit SSD1306 and Dependecies such as Adaruit GFX..etc
 *    please check the required libraries section above.
 
 Before uploading, chose the target ESP32-CAM Board :
 
+in Teleview.ino:
 ```CPP
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
@@ -125,11 +131,11 @@ For the CAMERA_MODEL_TTGO_T1_CAMERA borad, please chose the "TTGO T1" and and se
 For example: in "camera_pins.h" inside the section "#elif defined(CAMERA_MODEL_TTGO_T1_CAMERA)", you will find these precompilers:
 * #define SDA_PIN 21
 * #define SCL_PIN 22
- 
+
 * #define I2C_DISPLAY_ADDR  0x3c
 * #define USE_OLED_AS_FLASH 1 // the OLED is on the same side as the camera
 * #define PIR_PIN           33 //GPIO_INPUT_IO_33 AS312
- 
+
 * #define BUTTON_PIN        34
 
 Also a section exists if an Active Buzzer is connected which is triggered with the motion detection.
@@ -233,6 +239,7 @@ Feature 	  |   Description
 /useDeepSleep   | Goto Deep sleep between timelapse ticks and PIR motion detection
 /motionDetectVC | Use Computer Vision (CV) for motion dection
 /alertALL       | Alert both Admin Id and Chat ID
+/sendEmail      | sends emails to up to 2 emails (with Photo)
 
 ## A note about PIR motion Detection and Buzzer alerts:
 1) IN ESP32-CAM AI Thinker the Buzzer and PIR are usually connected to PIN 12 and 13 which are also used for the SD card communication. so please pay attention in case you have issues afterwards.
@@ -294,5 +301,35 @@ OK 					|	Submit and Save the configuration.
 Delete Everything	| 	Deletes all configuration data. except Wifi credentials.
 Cancel				| 	Go back to AutoConnect Portal without saving.
 
+## Sending Emails
+In The configuration Page, you can set up the email sending feature through SMTP server.
+I do not recommend to sed emails from your mail email account, rather create a new email account dedicated for sending photos only. the password is stored plain text in the flash.
 
+Example:
+Gmail SMTP Server Settings
+If you’re using a Gmail account, these are the SMTP Server details:
+
+SMTP Server: smtp.gmail.com
+SMTP username: Complete Gmail address
+SMTP password: Your Gmail password
+SMTP port (TLS): 587
+SMTP port (SSL): 465
+SMTP TLS/SSL required: yes
+
+Outlook SMTP Server Settings
+For Outlook accounts, these are the SMTP Server settings:
+
+SMTP Server: smtp.office365.com
+SMTP Username: Complete Outlook email address
+SMTP Password: Your Outlook password
+SMTP Port: 587
+SMTP TLS/SSL Required: Yes
+Live or Hotmail SMTP Server Settings
+For Live or Hotmail accounts, these are the SMTP Server settings:
+
+SMTP Server: smtp.live.com
+SMTP Username: Complete Live/Hotmail email address
+SMTP Password: Your Windows Live Hotmail password
+SMTP Port: 587
+SMTP TLS/SSL Required: Yes
 

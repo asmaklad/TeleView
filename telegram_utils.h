@@ -7,6 +7,8 @@
 #include "persist.h"
 #include "webPages.h"
 #include <ArduinoJson.h>
+#include <ESP_Mail_Client.h>
+
 
 #if defined(SD_CARD_ON)
 #include "FS.h"                // SD Card ESP32
@@ -25,6 +27,12 @@ boolean bTelegramBotInitiated=false;
 boolean bInlineKeyboardResolution=false;
 boolean bInlineKeyboardExtraOptions=false;
 
+
+////////////////////////////////////////////////
+/* The SMTP Session object used for Email sending */
+SMTPSession smtp;
+/* Callback function to get the Email sending status */
+void smtpCallback(SMTP_Status status);
 ////////////////////////////////////////////////
 int Bot_mtbs = 1000; //mean time between scan messages
 long Bot_lasttime;   //last time messages' scan has been done
@@ -32,29 +40,40 @@ String keyboardJson = "" ;
 boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
-String alertTelegram(String msg);
-String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id=0);
+String alertTelegram(String msg,boolean messageOnly=false);
+String sendCapturedImage2Telegram2(String chat_id,String messageText="",uint16_t message_id=0);
 void handleNewMessages(int numNewMessages);
 String formulateKeyboardJson();
 
+/*
 bool isMoreDataAvailable();
 byte *getNextBuffer();
 int getNextBufferLen();
 bool dataAvailable = false;
 //uint8_t photoNextByte();
+*/
 ////////////////////////////////////////////////
 int Counter_isMoreDataAvailable=0;
 int Counter_getNextBuffer=0;
 int Counter_getNextBufferLen=0;
 ///////////////////////////////////////////////
-String alertTelegram(String msg){
+String alertTelegram(String msg,boolean messageOnly){
     String result="";
-    Serial.print("AlertMessage:"+msg);
-    bot.sendMessage(configItems.adminChatIds, msg,"" );
-    result= sendCapturedImage2Telegram2(configItems.adminChatIds);
+    #ifdef CAMERA_MODEL_M5STACK_PSRAM
+      msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
+    #endif
+    Serial.println("AlertMessage:"+msg);
+    if (messageOnly){
+      bot.sendMessage(configItems.adminChatIds, msg,"" );
+    }else{
+      result= sendCapturedImage2Telegram2(configItems.adminChatIds,msg);
+    }
     if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
-      bot.sendMessage(configItems.userChatIds, msg,"" );
-      String result= sendCapturedImage2Telegram2(configItems.userChatIds);
+      if (messageOnly){
+        bot.sendMessage(configItems.userChatIds, msg,"" );
+      }else{
+        String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
+      }
     }
     Serial.println(result);
     return(result);
@@ -76,18 +95,50 @@ String formulateKeyboardJson(){
   return(lkeyboardJson);
 }
 ///////////////////////////////////////////////
+/* Callback function to get the Email sending status */
+void smtpCallback(SMTP_Status status)
+{
+    /* Print the current status */
+    Serial.println(status.info());
+
+    /* Print the sending result */
+    if (status.success())
+    {
+        Serial.println("----------------");
+        Serial.printf("Message sent success: %d\n", status.completedCount());
+        Serial.printf("Message sent failled: %d\n", status.failedCount());
+        Serial.println("----------------\n");
+        struct tm dt;
+
+        for (size_t i = 0; i < smtp.sendingResult.size(); i++)
+        {
+            /* Get the result item */
+            SMTP_Result result = smtp.sendingResult.getItem(i);
+            localtime_r(&result.timesstamp, &dt);
+
+            Serial.printf("Message No: %d\n", i + 1);
+            Serial.printf("Status: %s\n", result.completed ? "success" : "failed");
+            Serial.printf("Date/Time: %d/%d/%d %d:%d:%d\n", dt.tm_year + 1900, dt.tm_mon + 1, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
+            Serial.printf("Recipient: %s\n", result.recipients);
+            Serial.printf("Subject: %s\n", result.subject);
+        }
+        Serial.println("----------------\n");
+    }
+}
+
+///////////////////////////////////////////////
 String formulateResolutionInlineKeyBoard(){
   String lkeyboardJson = "[";
   String sep="";
-  int maxRes=0;
   /*
+  int maxRes=0;
   if(psramFound()){
     maxRes = FRAMESIZE_UXGA;
   } else {
     maxRes = FRAMESIZE_SVGA;
   }
-  */
   maxRes = FRAMESIZE_UXGA;
+  */
   Serial.print("formulateResolutionInlineKeyBoard:maxRes: ");
   Serial.println (maxRes);
   for (int i=0;i<=maxRes;i++){
@@ -100,7 +151,7 @@ String formulateResolutionInlineKeyBoard(){
             checkMark+
             String(resolutions[i][0])+":"+
             String(resolutions[i][1])+
-            "\",\"callback_data\":\""+String(resolutions[i][0])+"\"";
+            "\",\"callback_data\":\"/"+String(resolutions[i][0])+"\"";
     lkeyboardJson +=  "}]";
     sep=",";
   }
@@ -149,6 +200,10 @@ String formulateOptionsInlineKeyBoard(){
   keyboardJson += "[{ \"text\" : \"Camera Flip is:";
   keyboardJson += (configItems.vFlip?"ON\u2705":"OFF\u274C");
   keyboardJson += "\", \"callback_data\" : \"/vFlip\" }],";
+
+  keyboardJson += R"([{ "text" : "Alert by Email. )";
+  keyboardJson += (configItems.sendEmail?"ON\u2705":"OFF\u274C");
+  keyboardJson += R"(", "callback_data" : "/sendEmail" }],)";
 
   keyboardJson += R"([{ "text" : "Alert all:)";
   keyboardJson += (configItems.alertALL?"ON\u2705":"OFF\u274C");
@@ -222,6 +277,8 @@ void handleNewMessages(int numNewMessages) {
             configItems.hMirror = !configItems.hMirror;
           }else if (text == "/vFlip") {
             configItems.vFlip = !configItems.vFlip;
+          }else if (text == "/sendEmail") {
+            configItems.sendEmail = !configItems.sendEmail;
           }else if (text == "/motionDetectVC") {
             configItems.motionDetectVC = !configItems.motionDetectVC;
           }else if (text == "/alertALL") {
@@ -249,9 +306,9 @@ void handleNewMessages(int numNewMessages) {
               acConfig.ota=AC_OTA_BUILTIN;
             Portal.config(acConfig);
           }
-          bot.sendMessageWithInlineKeyboard(chat_id, 
+          bot.sendMessageWithInlineKeyboard(chat_id,
             "Change settings:",
-            "html", 
+            "html",
             formulateOptionsInlineKeyBoard(),
             message_id
             );
@@ -267,7 +324,7 @@ void handleNewMessages(int numNewMessages) {
       } else {
         String text = bot.messages[i].text;
         String from_name = bot.messages[i].from_name;
-        if (from_name == "") 
+        if (from_name == "")
           from_name = "Guest";
         Serial.println("TEXT:"+text);
         if (bSetLapseMode) {
@@ -279,7 +336,11 @@ void handleNewMessages(int numNewMessages) {
           if(bot.messages[i].type == "channel_post") {
             bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
           } else {
-            String result= sendCapturedImage2Telegram2(chat_id,message_id);
+            String msg="Photo Request";
+            #ifdef CAMERA_MODEL_M5STACK_PSRAM
+              msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
+            #endif
+            String result= sendCapturedImage2Telegram2(chat_id,msg,message_id);
             Serial.println("result: "+result);
           }
           Serial.println("handleNewMessages/sendPhoto:END");
@@ -298,6 +359,7 @@ void handleNewMessages(int numNewMessages) {
           bSetLapseMode=true;
           bPrintOptions=false;
         }else if(text == "/moreSettings") {
+          configItems.useDeepSleep=false;
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
           bInlineKeyboardExtraOptions=true;
@@ -320,6 +382,7 @@ void handleNewMessages(int numNewMessages) {
           welcome += "\t motionDetectVC | MotionDetect by Vision not PIR -no DeepSleep\n";
           welcome += "\t alertALL     | MotionDetect/timelapse to all chatIds not just Admin\n";
           welcome += "\t saveToSD     | Save Photos to SD also\n";
+          welcome += "\t sendEmail    | Alert by Email also\n";
           welcome += "\t useDeepSleep | goto to deep sleep on MotionDetct and timeLapse\n";
           welcome += "\t useBuzzer    | trigger buzzer on motion detect\n";
           welcome += "\t webCaptureOn | enables and disbales the /capture.jpg url\n";
@@ -364,8 +427,131 @@ void handleNewMessages(int numNewMessages) {
 }
 
 ///////////////////////////////////////////////
+void sendEmailPhoto(camera_fb_t * fb ,String espMessage="Teleview Photo"){
+  /** Enable the debug via Serial port
+   * none debug or 0
+   * basic debug or 1
+  */
+  smtp.debug(1);
+  /* Set the callback function to get the sending results */
+  smtp.callback(smtpCallback);
 
-String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
+  /* Declare the session config data */
+  ESP_Mail_Session session;
+
+  //boolean sMTPTLS;
+
+  /* Set the session config */
+  session.server.host_name = configItems.sMTPServer.c_str();
+  session.server.port = configItems.sMTPPort;
+  session.login.email = configItems.sMTPUsername.c_str();
+  session.login.password = configItems.sMTPPassword.c_str();
+  //session.login.user_domain = "hotmail.com";
+
+  /* Declare the message class */
+  SMTP_Message message;
+
+  /* Enable the chunked data transfer with pipelining for large message if server supported */
+  message.enable.chunking = true;
+
+  /* Set the message headers */
+  message.sender.name = "ESP Mail";
+  message.sender.email = configItems.sMTPUsername.c_str();
+
+  message.subject = espMessage.c_str();
+  message.addRecipient("Admin", configItems.adminEmail.c_str());
+  message.addRecipient("User", configItems.userEmail.c_str());
+
+  int fb_width=fb->width;
+  int fb_height=fb->height;
+  String msg= R"(
+      <span style="color:#ff0000;">
+          {{espMessage}}
+      </span>
+      <br/><br/>
+      <img width="{{WIDTH}}" height="{{HEIGHT}}" src="firebase_logo.jpeg"  >
+      )";
+  msg.replace("{{espMessage}}",espMessage);
+  msg.replace("{{WIDTH}}",String(fb_width) );
+  msg.replace("{{HEIGHT}}",String(fb_height) );
+  message.html.content =msg.c_str();
+
+  /** The HTML text message character set e.g.
+   * us-ascii
+   * utf-8
+   * utf-7
+   * The default value is utf-8
+  */
+  message.html.charSet = "utf-8";
+
+  /** The content transfer encoding e.g.
+   * enc_7bit or "7bit" (not encoded)
+   * enc_qp or "quoted-printable" (encoded)
+   * enc_base64 or "base64" (encoded)
+   * enc_binary or "binary" (not encoded)
+   * enc_8bit or "8bit" (not encoded)
+   * The default value is "7bit"
+  */
+  message.html.transfer_encoding = Content_Transfer_Encoding::enc_qp;
+
+  message.text.content = "This message contains 1 inline image.\r\nThe inline images were not shown in the plain text message.";
+  message.text.charSet = "utf-8";
+  message.text.transfer_encoding = Content_Transfer_Encoding::enc_base64;
+
+  /** The message priority
+   * esp_mail_smtp_priority_high or 1
+   * esp_mail_smtp_priority_normal or 3
+   * esp_mail_smtp_priority_low or 5
+   * The default value is esp_mail_smtp_priority_low
+  */
+  message.priority = esp_mail_smtp_priority::esp_mail_smtp_priority_normal;
+
+  /** The Delivery Status Notifications e.g.
+   * esp_mail_smtp_notify_never
+   * esp_mail_smtp_notify_success
+   * esp_mail_smtp_notify_failure
+   * esp_mail_smtp_notify_delay
+   * The default value is esp_mail_smtp_notify_never
+  */
+  message.response.notify = esp_mail_smtp_notify_success | esp_mail_smtp_notify_failure | esp_mail_smtp_notify_delay;
+
+  /* Set the custom message header */
+  //+configItems.sMTPUsername
+  message.addHeader( "Message-ID: user@domain.org");
+
+  /* The attachment data item */
+  SMTP_Attachment att;
+
+  /** Set the inline image info e.g. 
+   * file name, MIME type, BLOB data, BLOB data size,
+   * transfer encoding (should be base64 for inline image)
+  */
+  att.descr.filename = "firebase_logo.jpeg";
+  att.descr.mime = "image/jpeg";
+  att.blob.data = fb->buf;
+  att.blob.size = fb->len;
+  //att.descr.transfer_encoding = Content_Transfer_Encoding::enc_base64;
+  att.descr.transfer_encoding = Content_Transfer_Encoding::enc_base64;
+  att.descr.content_encoding = Content_Transfer_Encoding::enc_binary;
+
+  // Add attachment to the message
+  //message.addAttachment(att);
+
+  /* Add inline image to the message */
+  message.addInlineImage(att);
+
+  /* Connect to server with the session config */
+  if (!smtp.connect(&session))
+    return;
+
+  /* Start sending the Email and close the session */
+  if (!MailClient.sendMail(&smtp, &message, true))
+    Serial.println("Error sending Email, " + smtp.errorReason());
+
+}
+
+///////////////////////////////////////////////
+String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t message_id) {
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
   StaticJsonDocument<2048> doc;
@@ -429,7 +615,10 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
 
   String head ="";
   head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id +"\r\n";
-  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" +String(fb_width)+"x"+String(fb_height)+", "+String(fb->len) +" B\r\n";
+  head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" +
+            String(fb_width)+"x"+String(fb_height)+", "+String(fb->len) +" B"+
+            ","+messageText+
+            "\r\n";
   if (message_id>0)
     head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"reply_to_message_id\"; \r\n\r\n" + String(message_id) +"\r\n";
   head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"parse_mode\"; \r\n\r\nMarkdown\r\n";
@@ -536,6 +725,18 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
   }
   PICTURES_COUNT++;
   botClient.stop();
+  // send Email
+  if (configItems.sendEmail){
+    if (configItems.sMTPPort>0 &&
+        configItems.sMTPPassword.length() >0 &&
+        configItems.sMTPUsername.length() >0 &&
+        configItems.sMTPServer.length() >0 &&
+        configItems.adminEmail.length() >0
+        )
+    {
+      sendEmailPhoto(fb,messageText);
+    }
+  }
   // saving to SD card.
 #if defined(SD_CARD_ON)
   if (configItems.saveToSD) {
@@ -558,7 +759,7 @@ String sendCapturedImage2Telegram2(String chat_id,uint16_t message_id) {
           tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
           tm->tm_hour, tm->tm_min, tm->tm_sec);
         // Path where new picture will be saved in SD Card
-        String path = "/picture" + String(dateTime) +".jpg";
+        String path = "/picture" + String(dateTime) + "_" + messageText+".jpg";
         fs::FS &fs = SD_MMC;
         Serial.printf("Picture file name: %s\n", path.c_str());
         File file = fs.open(path.c_str(), FILE_WRITE);

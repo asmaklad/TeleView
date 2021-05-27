@@ -19,6 +19,7 @@
 #define VSYNC_GPIO_NUM   25
 #define HREF_GPIO_NUM    23
 #define PCLK_GPIO_NUM    22
+#define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_ESP_EYE)
 #define PWDN_GPIO_NUM    -1
@@ -38,6 +39,7 @@
 #define VSYNC_GPIO_NUM   5
 #define HREF_GPIO_NUM    27
 #define PCLK_GPIO_NUM    25
+#define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_M5CAM)
 #define PWDN_GPIO_NUM     -1
@@ -57,6 +59,7 @@
 #define VSYNC_GPIO_NUM    22
 #define HREF_GPIO_NUM     26
 #define PCLK_GPIO_NUM     21
+#define MAX_RESOULTION    FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_M5STACK_PSRAM)
 #define PWDN_GPIO_NUM     -1
@@ -76,6 +79,26 @@
 #define VSYNC_GPIO_NUM    22
 #define HREF_GPIO_NUM     26
 #define PCLK_GPIO_NUM     21
+#define MAX_RESOULTION    FRAMESIZE_QXGA
+
+//#define LED_PIN             2
+//#define BAT_OUTPUT_HOLD_PIN 33
+//#define BAT_ADC_PIN         38
+
+#define BM8563_SDA_PIN      12
+#define BM8563_SCL_PIN      14
+
+#define CAMERA_LED_GPIO 2
+#define BAT_OUTPUT_HOLD_PIN 33
+#define BAT_ADC_PIN 38
+#define Ext_PIN_1 4
+#define Ext_PIN_2 13
+#include "Arduino.h"
+#include "freertos/FreeRTOS.h"
+#include <camera_pins.h>
+#include "battery.h"
+#include "led.h"
+#include "bmm8563.h"
 
 #elif defined(CAMERA_MODEL_M5STACK_WIDE)
 #define PWDN_GPIO_NUM     -1
@@ -95,6 +118,7 @@
 #define VSYNC_GPIO_NUM    25
 #define HREF_GPIO_NUM     26
 #define PCLK_GPIO_NUM     21
+#define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_AI_THINKER) //Board definition "AI Thinker ESP32-CAM"
 #define PWDN_GPIO_NUM     32
@@ -119,6 +143,7 @@
 
 // AI thinker has an SD CARD attached to it
 #define SD_CARD_ON true
+#define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_TTGO_T1_CAMERA) // Board definition "ESP32 WROVER Module"
 #define PWDN_GPIO_NUM     26
@@ -138,6 +163,7 @@
 #define VSYNC_GPIO_NUM    27
 #define HREF_GPIO_NUM     25
 #define PCLK_GPIO_NUM     19
+#define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #define SDA_PIN 21
 #define SCL_PIN 22

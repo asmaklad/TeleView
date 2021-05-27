@@ -23,25 +23,28 @@ void printLocalTime();
 ///////////////////////////////////////////////////////////
 void populateResolutionsSelects(AutoConnectAux& aux){
   //aux.fetchElement();
-  AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
-  selectElementFS.empty();
-  int maxRes=0;
   /*
   if(psramFound()){
     maxRes = FRAMESIZE_UXGA;
   } else {
     maxRes = FRAMESIZE_SVGA;
   }
-  */
+  int maxRes=0;
   maxRes = FRAMESIZE_UXGA;
+  */
+  //////
+  AutoConnectSelect& selectElementFS = aux["XframeSize"].as<AutoConnectSelect>();
+  selectElementFS.empty();
   for (int n = 0; n <= maxRes; n++) {
     selectElementFS.add(String(resolutions[n][0]+":"+resolutions[n][1]));
   }
+  //////
   AutoConnectSelect& selectElementTZ = aux["Xtimezone"].as<AutoConnectSelect>();
   selectElementTZ.empty();
   for (int n = 0; n < sizeof(TZ)/sizeof(Timezone_t) ; n++) {
     selectElementTZ.add( String(TZ[n].zone) );
   }
+  //////
   Serial.println("populateResolutionsSelects#4");
 }
 ///////////////////////////////////////////////////////////
@@ -87,7 +90,7 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
   Serial.println(args.size());
   String result="Success";
   for (int i=0;i<args.args();i++){
-    Serial.printf( "%s:%s\n", args.argName(i).c_str(), String(args.arg(i)).c_str() );
+    Serial.printf( "*> %s:%s\n", args.argName(i).c_str(), String(args.arg(i)).c_str() );
   }
 #ifndef  I2C_DISPLAY_ADDR
     aux["XscreenOn"].as<AutoConnectCheckbox>().enable=false;
@@ -105,6 +108,12 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 #ifndef  BUZZER_PIN
     aux["XuseBuzzer"].as<AutoConnectCheckbox>().enable=false;
 #endif
+
+// not yet implemented:
+aux["Xset_whitebal"].as<AutoConnectCheckbox>().enable=false;
+//aux["Xset_saturation"].as<AutoConnectCheckbox>().enable=false;
+//aux["Xset_contrast"].as<AutoConnectCheckbox>().enable=false;
+//aux["Xset_brightness"].as<AutoConnectCheckbox>().enable=false;
 if (!psramFound()){
     //TBD
     //aux["XFaceDetect"].as<AutoConnectCheckbox>().enable=false;
@@ -124,13 +133,30 @@ if (!psramFound()){
       configItems.lapseTime=args.arg("XlapseTime").toInt();
     if (args.hasArg("XframeSize")){
       String framsizeText=args.arg("XframeSize");
-      framsizeText=framsizeText.substring(0,framsizeText.indexOf(":"));
+      framsizeText="/"+framsizeText.substring(0,framsizeText.indexOf(":"));
       unsigned int matched=matchResolutionText(framsizeText);
       configItems.frameSize=(framesize_t) (matched) ;
     }
+    configItems.timeZone=(args.hasArg("Xtimezone")?args.arg("Xtimezone"):"Europe/Berlin");
     configItems.hMirror=(args.hasArg("XhMirror")?true:false);
     configItems.useFlash=(args.hasArg("XuseFlash")?true:false);
     configItems.vFlip=(args.hasArg("XvFlip")?true:false);
+
+    configItems.set_whitebal=(args.hasArg("Xset_whitebal")?args.arg("Xset_whitebal").toInt():0);
+    configItems.set_saturation=(args.hasArg("Xset_saturation")?args.arg("Xset_saturation").toInt():0);
+    configItems.set_contrast=(args.hasArg("Xset_contrast")?args.arg("Xset_contrast").toInt():0);
+    configItems.set_brightness=(args.hasArg("Xset_brightness")?args.arg("Xset_brightness").toInt():0);
+    configItems.jpegQuality=(args.hasArg("XjpegQuality")?args.arg("XjpegQuality").toInt():0);
+
+    configItems.sMTPTLS=(args.hasArg("XsMTPTLS")?true:false);
+    configItems.sMTPPort=(args.hasArg("XsMTPPort")?args.arg("XsMTPPort").toInt():0);
+    configItems.sMTPPassword=(args.hasArg("XsMTPPassword")?args.arg("XsMTPPassword"):"");
+    configItems.sMTPUsername=(args.hasArg("XsMTPUsername")?args.arg("XsMTPUsername"):"");
+    configItems.sMTPServer=(args.hasArg("XsMTPServer")?args.arg("XsMTPServer"):"");
+    configItems.userEmail=(args.hasArg("XuserEmail")?args.arg("XuserEmail"):"");
+    configItems.adminEmail=(args.hasArg("XadminEmail")?args.arg("XadminEmail"):"");
+    configItems.sendEmail=(args.hasArg("XsendEmail")?true:false);
+
     configItems.motionDetectVC=(args.hasArg("XmotionDetectVC")?true:false);
     configItems.alertALL=(args.hasArg("XalertALL")?true:false);
     configItems.saveToSD=(args.hasArg("XsaveToSD")?true:false);
@@ -154,6 +180,19 @@ if (!psramFound()){
     aux["XuseFlash"].as<AutoConnectCheckbox>().checked=configItems.useFlash;
     aux["XhMirror"].as<AutoConnectCheckbox>().checked=configItems.hMirror;
     aux["XvFlip"].as<AutoConnectCheckbox>().checked=configItems.vFlip;
+    aux["Xset_whitebal"].as<AutoConnectInput>().value=configItems.set_whitebal;
+    aux["Xset_saturation"].as<AutoConnectInput>().value=configItems.set_saturation;
+    aux["Xset_contrast"].as<AutoConnectInput>().value=configItems.set_contrast;
+    aux["Xset_brightness"].as<AutoConnectInput>().value=configItems.set_brightness;
+    aux["XjpegQuality"].as<AutoConnectInput>().value=configItems.jpegQuality;
+    aux["XsMTPTLS"].as<AutoConnectCheckbox>().checked=configItems.sMTPTLS;
+    aux["XsMTPPort"].as<AutoConnectInput>().value=configItems.sMTPPort;
+    aux["XsMTPPassword"].as<AutoConnectInput>().value=configItems.sMTPPassword;
+    aux["XsMTPUsername"].as<AutoConnectInput>().value=configItems.sMTPUsername;
+    aux["XsMTPServer"].as<AutoConnectInput>().value=configItems.sMTPServer;
+    aux["XuserEmail"].as<AutoConnectInput>().value=configItems.userEmail;
+    aux["XadminEmail"].as<AutoConnectInput>().value=configItems.adminEmail;
+    aux["XsendEmail"].as<AutoConnectCheckbox>().checked=configItems.sendEmail;
     aux["XmotionDetectVC"].as<AutoConnectCheckbox>().checked=configItems.motionDetectVC;
     aux["XalertALL"].as<AutoConnectCheckbox>().checked=configItems.alertALL;
     aux["XsaveToSD"].as<AutoConnectCheckbox>().checked=configItems.saveToSD;
@@ -166,6 +205,10 @@ if (!psramFound()){
         String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1])
     );
     Serial.println("XframeSize_select:"+String(resolutions[configItems.frameSize][0]+":"+resolutions[configItems.frameSize][1]));
+    aux["XtimeZone"].as<AutoConnectSelect>().select (
+        String(configItems.timeZone)
+    );
+    Serial.println("XtimeZone_select:"+String(configItems.timeZone));
     result="Loaded";
   } else{
     result="This Shouldn't happen";
@@ -192,10 +235,22 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "value": "Please use this page to configure your Teleview settings"
     },
     {
+      "name": "seperator1",
+      "type": "ACElement",
+      "value": "<hr style='height:1px;border-width:0;color:gray;background-color:#52a6ed'>"
+    },
+    {
+      "name": "sectionBot",
+      "type": "ACText",
+      "value": "<h2>Telegram Bot Configuration</h2>",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
+    },
+    {
       "name": "XdeviceName",
       "type": "ACInput",
       "label": "Device Name",
       "placeholder": "TeleView",
+      "apply" : "text",
       "pattern": "^(.+)$",
       "global": true
     },
@@ -205,11 +260,13 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "label": "Lapse Time-min",
       "placeholder": "720",
       "pattern": "^([0-9]+)$",
-      "global": true
+      "global": true,
+      "apply" : "number"
     },
     {
       "name": "bxToken",
       "type": "ACInput",
+      "apply" : "text",
       "label": "Telegram Bot Token",
       "placeholder": "Bot:Token",
       "pattern": "^(.+)$",
@@ -218,6 +275,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
     {
       "name": "XTelegramAdminChatId",
       "type": "ACInput",
+      "apply" : "text",
       "label": "Admin Chat ID",
       "pattern": "^([0-9]+)$",
       "global": true
@@ -225,9 +283,21 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
     {
       "name": "XTelegramUserChatId",
       "type": "ACInput",
+      "apply" : "text",
       "label": "User Chat ID",
       "pattern": "^([0-9]+)$",
       "global": true
+    },
+    {
+      "name": "seperator2",
+      "type": "ACElement",
+      "value": "<hr style='height:1px;border-width:0;color:gray;background-color:#52a6ed'>"
+    },
+    {
+      "name": "sectionBasic",
+      "type": "ACText",
+      "value": "<h2>Basic Configuration</h2>",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
     },
     {
       "name": "XuseFlash",
@@ -280,6 +350,11 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "global": true
     },
     { "name": "XmotionDetectVC", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "MotionDetect by Vision not PIR", "checked": false, "global": true },
+    { "name": "Xset_whitebal", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Photo white balance mode 0-4","global": true , "placeholder": "set_whitebal",  "pattern": "^([+]?([0-4]*))$" ,"apply" : "number"},
+    { "name": "Xset_saturation", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Photo saturation -2 to 2[0]","global": true , "placeholder": "set_saturation",  "pattern": "^([+-]?([0-9]*))$","apply" : "number"},
+    { "name": "Xset_contrast", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Photo Contrast -2 to 2[0]","global": true , "placeholder": "set_contrast",  "pattern": "^([+-]?([0-9]*))$","apply" : "number"},
+    { "name": "Xset_brightness", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Photo Brightness -2 to 2[0]","global": true , "placeholder": "set_brightness",  "pattern": "^([+-]?([0-9]*))$","apply" : "number"},
+    { "name": "XjpegQuality", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Jpeg Quality 1-62[10-12]","global": true , "placeholder": "jpegQuality",  "pattern": "^([+-]?([0-9]*))$","apply" : "number"},
     {
       "name": "Xtimezone",
       "type": "ACSelect",
@@ -295,6 +370,36 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "option": [],
       "selected": 0,
       "global": true
+    },
+    {
+      "name": "seperator3",
+      "type": "ACElement",
+      "value": "<hr style='height:1px;border-width:0;color:gray;background-color:#52a6ed'>"
+    },
+    {
+      "name": "sectionEmail",
+      "type": "ACText",
+      "value": "<h2>Email Configuration</h2>",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
+    },
+    {
+      "name": "sectionEmail.1",
+      "type": "ACText",
+      "value": "<h3>dont use your real email, create a new one</h3>",
+      "style": "text-align:center;color:#2fff4f;padding:10px;"
+    },
+    { "name": "XsendEmail", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Alert by Email.", "checked": false, "global": true },
+    { "name": "XsMTPUsername", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "SMTP Email username","global": true , "placeholder": "sMTPUsername",  "pattern": "^(.+)$" ,"apply": "text"},
+    { "name": "XsMTPPassword", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "SMTP Email Password","global": true , "placeholder": "sMTPPassword",  "pattern": "^(.+)$" ,"apply": "password"},
+    { "name": "XsMTPServer", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "SMTP Email Server","global": true , "placeholder": "sMTPServer",  "pattern": "^(.+)$" ,"apply": "text"},
+    { "name": "XsMTPPort", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "SMTP Email Port","global": true , "placeholder": "sMTPPort",  "pattern": "^([+-]?([0-9]*))$" ,"apply": "number" },
+    { "name": "XsMTPTLS", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "SMTP TLS/SSL Required", "checked": false, "global": true },
+    { "name": "XadminEmail", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Email 1","global": true , "placeholder": "adminEmail",  "pattern": "^(.+)$" ,"apply": "text" },
+    { "name": "XuserEmail", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Email 2","global": true , "placeholder": "userEmail",  "pattern": "^(.+)$" ,"apply": "text" },
+    {
+      "name": "seperator4",
+      "type": "ACElement",
+      "value": "<hr style='height:1px;border-width:0;color:gray;background-color:#52a6ed'>"
     },
     {
       "name": "okSubmit",

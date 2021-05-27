@@ -10,8 +10,13 @@
 Preferences prefs;
 
 time_t timeOfLastPhoto=0;
-
+/*
+look in  resolution_info_t resolution[FRAMESIZE_INVALID]
+in https://github.com/espressif/esp32-camera/blob/master/driver/sensor.c
+in https://github.com/espressif/esp32-camera/blob/master/driver/include/sensor.h framesize_t
+*/
 String resolutions[][13]={ 
+  // OV2640 2MP
   {"96X96",    "96x96" },				      //    FRAMESIZE_96X96,    // 96x96
   {"QQVGA",    "160x120" },           //    FRAMESIZE_QQVGA,    // 160x120
   {"QCIF",     "176x144" },           //    FRAMESIZE_QCIF,     // 176x144
@@ -25,7 +30,12 @@ String resolutions[][13]={
   {"XGA",      "1024x768" },          //    FRAMESIZE_XGA,      // 1024x768
   {"HD",       "1280x720" },          //    FRAMESIZE_HD,       // 1280x720
   {"SXGA",     "1280x1024" },         //    FRAMESIZE_SXGA,     // 1280x1024
-  {"UXGA",     "1600x1200" }          //    FRAMESIZE_UXGA,     // 1600x1200
+  {"UXGA",     "1600x1200" },         //    FRAMESIZE_UXGA,     // 1600x1200
+  // OV3660 3MP
+  {"FHD",        "1920x1080" },       //    FRAMESIZE_FHD,     // 1600x1200
+  {"PortraitHD", "720x1280" },        //    FRAMESIZE_P_HD,     // 1600x1200
+  {"Portrait3MP","864x1536" },        //    FRAMESIZE_P_3MP,     // 1600x1200
+  {"QXGA",       "2048x1536" }        //    FRAMESIZE_QXGA,     // 1600x1200  
 };
 ///////////////////////////////////////////////////////////
 typedef struct {
@@ -64,10 +74,9 @@ static const Timezone_t TZ[] = {
 int matchResolutionText(String text){
   int result=-1;
   Serial.println("TESTX:"+text);
-  int maxRes=FRAMESIZE_UXGA;
   for (int i=0;i<=maxRes;i++){
-    Serial.println("compareTo:"+String(resolutions[i][0]));
-    if ((text.compareTo(String(resolutions[i][0])))==0){
+    Serial.println("compareTo:/"+String(resolutions[i][0]));
+    if ((text.compareTo(String("/"+resolutions[i][0])))==0){
       result=i;
       break;
     }
@@ -83,6 +92,19 @@ struct config_item {
   framesize_t frameSize;
   boolean hMirror;
   boolean vFlip;
+  int set_whitebal;
+  int set_saturation;
+  int set_contrast;
+  int set_brightness;
+  int jpegQuality;
+  boolean sMTPTLS;
+  int sMTPPort;
+  String sMTPPassword;
+  String sMTPUsername;
+  String sMTPServer;
+  String userEmail;
+  String adminEmail;
+  boolean sendEmail;
   boolean motionDetectVC;
   boolean alertALL;
   boolean saveToSD;
@@ -98,27 +120,24 @@ struct config_item {
   int lapseTime;
   String timeZone;
   boolean webCaptureOn;
-  // TODO
-  /*
-   *  jpeg_Qualtiy: value
-   *  WhiteBalance: value
-   *  Brightness: value
-   *  /sendVideo ?
-   *  /sendAudio ?
-   *  motion detect by Image not PIR  ON/OFF
-   *    face detect : ON/OFF and face recognize then add to Photo Caption.
-   *  send-email: email,server,token..etc
-   *  motionDetect Active times: define times where motion detection is enabled.
-   *  send photo at: sunrise, noon, afternoon, late afternoon, sunset. with offset time option.
-   *    Requires Geo Location info (send location telegram message to the bot), 
-   *    Requires NTP syncing. uses time zone ...etc.
-   *  integrate MQTT: on all events ,send an MQTT message
-  */
 } configItems {
   .useFlash = true,
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
+  .set_whitebal = 1,
+  .set_saturation = 0,
+  .set_contrast = 0,
+  .set_brightness = 0,
+  .jpegQuality = 12,
+  .sMTPTLS = true,
+  .sMTPPort = 0,
+  .sMTPPassword = "",
+  .sMTPUsername = "",
+  .sMTPServer = "",
+  .userEmail = "",
+  .adminEmail = "",
+  .sendEmail = true,
   .motionDetectVC = false,
   .alertALL = false,
   .saveToSD = true,
@@ -142,7 +161,7 @@ void deleteConfiguration();
 String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",char* sep="|");
 ////////////////////////////////////////////////////////////////////////////
 void deleteConfiguration(){
-  if (!prefs.begin("settings",true))
+  if (!prefs.begin("settings",false)) // False=RW
   {
     Serial.println("failed find settings prefrences! returning default."); 
     prefs.end();
@@ -155,6 +174,19 @@ void deleteConfiguration(){
     prefs.remove("frameSize");
     prefs.remove("hMirror");
     prefs.remove("vFlip");
+    prefs.remove("set_whitebal");
+    prefs.remove("set_saturation");
+    prefs.remove("set_contrast");
+    prefs.remove("set_brightness");
+    prefs.remove("jpegQuality");
+    prefs.remove("sMTPTLS");
+    prefs.remove("sMTPPort");
+    prefs.remove("sMTPPassword");
+    prefs.remove("sMTPUsername");
+    prefs.remove("sMTPServer");
+    prefs.remove("userEmail");
+    prefs.remove("adminEmail");
+    prefs.remove("sendEmail");
     prefs.remove("motionDetectVC");
     prefs.remove("alertALL");
     prefs.remove("saveToSD");
@@ -181,16 +213,31 @@ config_item loadConfiguration() {
   config_item ci ;
   if (!prefs.begin("settings",true))
   {
-    Serial.println("failed find settings prefrences! returning default."); 
+    Serial.println("failed find settings prefrences! returning default.");
     prefs.end();
     return(configItems);
   }else{
-    Serial.println("found settings prefrences.");    
+    Serial.println("found settings prefrences.");
     //////////////////////////////////////////////
     ci.useFlash = prefs.getBool("useFlash",configItems.useFlash);
     ci.frameSize = (framesize_t) prefs.getUInt("frameSize",configItems.frameSize);
     ci.hMirror = prefs.getBool("hMirror",configItems.hMirror);
     ci.vFlip = prefs.getBool("vFlip",configItems.vFlip);
+    ci.set_whitebal = prefs.getInt("set_whitebal",configItems.set_whitebal);
+    ci.set_saturation = prefs.getInt("set_saturation",configItems.set_saturation);
+    ci.set_contrast = prefs.getInt("set_contrast",configItems.set_contrast);
+    ci.set_brightness = prefs.getInt("set_brightness",configItems.set_brightness);
+    ci.jpegQuality = prefs.getInt("jpegQuality",configItems.jpegQuality);
+
+    ci.sMTPTLS = prefs.getBool("sMTPTLS",configItems.sMTPTLS);
+    ci.sMTPPort = prefs.getInt("sMTPPort",configItems.sMTPPort);
+    ci.sMTPPassword = prefs.getString("sMTPPassword",configItems.sMTPPassword);
+    ci.sMTPUsername = prefs.getString("sMTPUsername",configItems.sMTPUsername);
+    ci.sMTPServer = prefs.getString("sMTPServer",configItems.sMTPServer);
+    ci.userEmail = prefs.getString("userEmail",configItems.userEmail);
+    ci.adminEmail = prefs.getString("adminEmail",configItems.adminEmail);
+    ci.sendEmail = prefs.getBool("sendEmail",configItems.sendEmail);
+
     ci.motionDetectVC = prefs.getBool("motionDetectVC",configItems.motionDetectVC);
     ci.alertALL = prefs.getBool("alertALL",configItems.alertALL);
     ci.saveToSD = prefs.getBool("saveToSD",configItems.saveToSD);
@@ -201,7 +248,7 @@ config_item loadConfiguration() {
     ci.screenOn = prefs.getBool("screenOn",configItems.screenOn);
     ci.motDetectOn = prefs.getBool("motDetectOn",configItems.motDetectOn);
     ci.lapseTime=prefs.getInt("lapseTime",configItems.lapseTime);
-    ci.webCaptureOn=prefs.getBool("webCaptureOn",configItems.webCaptureOn);  
+    ci.webCaptureOn=prefs.getBool("webCaptureOn",configItems.webCaptureOn);
     ////////////////////////
     ci.deviceName=prefs.getString("deviceName",configItems.deviceName);
     ci.botTTelegram=prefs.getString("botTTelegram",configItems.botTTelegram);
@@ -217,7 +264,7 @@ config_item loadConfiguration() {
 boolean saveConfiguration(config_item* ci) {
   Serial.println("saveConfiguration:EEPROM Write:start");
   boolean bDirty=false;
-  if (!prefs.begin("settings")){
+  if (!prefs.begin("settings",false)){
     Serial.println("failed find settings prefrences! returning default."); 
     prefs.end();
     return (false);
@@ -230,6 +277,35 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("hMirror",ci->hMirror); bDirty=true; }
     if (prefs.getBool("vFlip")!=ci->vFlip)
       { prefs.putBool("vFlip",ci->vFlip); bDirty=true; }
+
+    if (prefs.getInt("set_whitebal")!=ci->set_whitebal)
+      { prefs.putInt("set_whitebal",ci->set_whitebal); bDirty=true; }
+    if (prefs.getInt("set_saturation")!=ci->set_saturation)
+      { prefs.putInt("set_saturation",ci->set_saturation); bDirty=true; }
+    if (prefs.getInt("set_contrast")!=ci->set_contrast)
+      { prefs.putInt("set_contrast",ci->set_contrast); bDirty=true; }
+    if (prefs.getInt("set_brightness")!=ci->set_brightness)
+      { prefs.putInt("set_brightness",ci->set_brightness); bDirty=true; }
+    if (prefs.getInt("jpegQuality")!=ci->jpegQuality)
+      { prefs.putInt("jpegQuality",ci->jpegQuality); bDirty=true; }
+    //
+    if (prefs.getBool("sMTPTLS")!=ci->sMTPTLS)
+      { prefs.putBool("sMTPTLS",ci->sMTPTLS); bDirty=true; }
+    if (prefs.getInt("sMTPPort")!=ci->sMTPPort)
+      { prefs.putInt("sMTPPort",ci->sMTPPort); bDirty=true; }
+    if (prefs.getString("sMTPPassword")!=ci->sMTPPassword)
+      { prefs.putString("sMTPPassword",ci->sMTPPassword); bDirty=true; }
+    if (prefs.getString("sMTPUsername")!=ci->sMTPUsername)
+      { prefs.putString("sMTPUsername",ci->sMTPUsername); bDirty=true; }
+    if (prefs.getString("sMTPServer")!=ci->sMTPServer)
+      { prefs.putString("sMTPServer",ci->sMTPServer); bDirty=true; }
+    if (prefs.getString("userEmail")!=ci->userEmail)
+      { prefs.putString("userEmail",ci->userEmail); bDirty=true; }
+    if (prefs.getString("adminEmail")!=ci->adminEmail)
+      { prefs.putString("adminEmail",ci->adminEmail); bDirty=true; }
+    if (prefs.getBool("sendEmail")!=ci->sendEmail)
+      { prefs.putBool("sendEmail",ci->sendEmail); bDirty=true; }
+    //
     if (prefs.getBool("motionDetectVC")!=ci->motionDetectVC)
       { prefs.putBool("motionDetectVC",ci->motionDetectVC); bDirty=true; }
     if (prefs.getBool("alertALL")!=ci->alertALL)
@@ -253,23 +329,23 @@ boolean saveConfiguration(config_item* ci) {
     ///////////////////////////////
     if (!prefs.getString("deviceName").equals(ci->deviceName)){
       prefs.putString("deviceName",ci->deviceName);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("botTTelegram").equals(ci->botTTelegram)){
       prefs.putString("botTTelegram",ci->botTTelegram);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("adminChatIds").equals(ci->adminChatIds)){
       prefs.putString("adminChatIds",ci->adminChatIds);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("userChatIds").equals(ci->userChatIds)){
       prefs.putString("userChatIds",ci->userChatIds);
-      bDirty=true; 
+      bDirty=true;
     }
     if (!prefs.getString("timeZone").equals(ci->timeZone)){
       prefs.putString("timeZone",ci->timeZone);
-      bDirty=true; 
+      bDirty=true;
     }
   }
   prefs.end();
@@ -288,11 +364,13 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Local URL:"+sep+"";
   result += "<a href='http://" + ci->deviceName +".local'>" + ci->deviceName +".local</a>" + suffix;
   result += "<pre>\n";
+  
   result += prefix+" *Attribute*     "+sep+" *Value* "+suffix;
   result += prefix+"Device Name      "+sep+"";
   result += ci->deviceName + suffix;
   result += prefix+"WIFI SSID        "+sep+"";
   result += WiFi.SSID() + suffix;
+  
   result += prefix+"PSRAM ?          "+sep+"";
   result += (psramFound() ? String("true") : String("false")) +suffix;
   result += prefix+"PSRAM SIZE       "+sep+"";
@@ -302,13 +380,17 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"compileDate      "+sep+"";
   result += compileDate +suffix;
   result += prefix+"compileTime      "+sep+"";
+  
   result += compileTime +suffix;
   result += prefix+"compileCompiler  "+sep+"";
   result += compileCompiler +suffix;
+  
   result += prefix+"Chip Model       "+sep+"";
   result += ESP.getChipModel()  +suffix;
+  
   result += prefix+"Chip Revision    "+sep+"";
   result += ESP.getChipRevision()  +suffix;
+  
   result += prefix+"Chip Cores       "+sep+"";
   result += ESP.getChipCores()  +suffix;
   //////////////////////////////////////////////
@@ -325,6 +407,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Current Time     "+sep+"";
   result += String(dateTime)  +suffix;
   //////////////////////////////////////////////
+  
 #if defined(IS_THERE_A_FLASH)
   result += prefix+"useFlash         "+sep+"";
   result += (ci->useFlash ? String("true") : String("false")) +suffix;
@@ -351,6 +434,33 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
+  //result += prefix+"set_whitebal     "+sep+"";
+  //result += String(ci->set_whitebal)  + suffix;
+  result += prefix+"set_saturation   "+sep+"";
+  result += String(ci->set_saturation)  + suffix;
+  result += prefix+"set_contrast     "+sep+"";
+  result += String(ci->set_contrast)  + suffix;
+  result += prefix+"set_brightness   "+sep+"";
+  result += String(ci->set_brightness)  + suffix;
+  result += prefix+"jpegQuality      "+sep+"";
+  result += String(ci->jpegQuality)  + suffix;
+  result += prefix+"sMTPTLS          "+sep+"";
+  result += (ci->sMTPTLS ? String("true") : String("false"))  + suffix;
+  result += prefix+"sMTPPort         "+sep+"";
+  result += String(ci->sMTPPort)  + suffix;
+  //result += prefix+"sMTPPassword     "+sep+"";
+  //result += String(ci->sMTPPassword)  + suffix;
+  result += prefix+"sMTPUsername     "+sep+"";
+  result += String(ci->sMTPUsername)  + suffix;
+  result += prefix+"sMTPServer       "+sep+"";
+  result += String(ci->sMTPServer)  + suffix;
+  result += prefix+"userEmail        "+sep+"";
+  result += String(ci->userEmail)  + suffix;
+  result += prefix+"adminEmail       "+sep+"";
+  result += String(ci->adminEmail)  + suffix;
+  result += prefix+"sendEmail        "+sep+"";
+  
+  result += (ci->sendEmail ? String("true") : String("false"))  + suffix;
   result += prefix+"motionDetectCV   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
   result += prefix+"alertALL         "+sep+"";
@@ -360,6 +470,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"webCaptureOn     "+sep+"";
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
   result += prefix+"frameSize        "+sep+"";
+  Serial.println("printConfiguration#10");
   result += String((unsigned int) ci->frameSize) + ",";
   Serial.print ("printConfiguration:ci->frameSize:");
   Serial.println (ci->frameSize);
@@ -376,6 +487,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += String(ci->lapseTime)+suffix;
   result += prefix+"timeZone         "+sep+"";
   result += ci->timeZone+suffix;
+  Serial.println("printConfiguration#11");
   /*
   struct tm *tm;
   time_t  t;
@@ -393,6 +505,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
     result += "UNKNOWN" +suffix;
   }
   result += "</pre>";
+  Serial.println("printConfiguration#12");
   return (result);
 }
 ////////////////////////////////////////////////////////////////////////////

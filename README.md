@@ -147,7 +147,7 @@ This sektch uses the Autoconnect Arduino library (https://github.com/Hieromon/Au
 When the sketch starts, it looks for a familiar WiFi. If it can't find one, it will start its own Access Point where the owner can connect and configure the WIFI. 
 First Time- SSID will be "TeleView" with the password "tv-ei-694"
 
-The AutoConnect library will start a portal wiht the page /config to configure the Wifi and other configuration parameters.
+The AutoConnect library will start a portal with the page /config to configure the Wifi and other configuration parameters.
 
 After a scucessfull Wifi connection, the same portal interface will be exposed to the local Wifi. The borad couled be reached on the LAN through the address "{{The Device Name}}.local"
 

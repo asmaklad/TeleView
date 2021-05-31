@@ -92,7 +92,6 @@ struct config_item {
   framesize_t frameSize;
   boolean hMirror;
   boolean vFlip;
-  String ftpPass;
   String ftpUser;
   boolean ftpServerOn;
   boolean videoToSDOn;
@@ -132,12 +131,11 @@ struct config_item {
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
-  .ftpPass = "esp",
-  .ftpUser = "esp",
-  .ftpServerOn = false,
-  .videoToSDOn = false,
+  .ftpUser = "",
+  .ftpServerOn = true,
+  .videoToSDOn = true,
   .videoTime = 0,
-  .sendVideoOn = false,
+  .sendVideoOn = true,
   .sendVideo = 0,
   .set_whitebal = 1,
   .set_saturation = 0,
@@ -151,17 +149,17 @@ struct config_item {
   .sMTPServer = "",
   .userEmail = "",
   .adminEmail = "",
-  .sendEmail = false,
+  .sendEmail = true,
   .motionDetectVC = false,
   .alertALL = false,
-  .saveToSD = false,
+  .saveToSD = true,
   .useDeepSleep = false,
-  .useBuzzer = false,
-  .screenFlip = false,
+  .useBuzzer = true,
+  .screenFlip = true,
   .screenOn=true,
-  .motDetectOn=false,
+  .motDetectOn=true,
   .deviceName = String("TeleView"),
-  .botTTelegram = String("0X123456789"),
+  .botTTelegram = String("0123456789"),
   .adminChatIds = String("0123456789"),
   .userChatIds  = String("0123456789"),
   .lapseTime=60,
@@ -188,7 +186,6 @@ void deleteConfiguration(){
     prefs.remove("frameSize");
     prefs.remove("hMirror");
     prefs.remove("vFlip");
-    prefs.remove("ftpPass");
     prefs.remove("ftpUser");
     prefs.remove("ftpServerOn");
     prefs.remove("videoToSDOn");
@@ -244,7 +241,6 @@ config_item loadConfiguration() {
     ci.frameSize = (framesize_t) prefs.getUInt("frameSize",configItems.frameSize);
     ci.hMirror = prefs.getBool("hMirror",configItems.hMirror);
     ci.vFlip = prefs.getBool("vFlip",configItems.vFlip);
-    ci.ftpPass = prefs.getString("ftpPass",configItems.ftpPass);
     ci.ftpUser = prefs.getString("ftpUser",configItems.ftpUser);
     ci.ftpServerOn = prefs.getBool("ftpServerOn",configItems.ftpServerOn);
     ci.videoToSDOn = prefs.getBool("videoToSDOn",configItems.videoToSDOn);
@@ -305,9 +301,7 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("hMirror",ci->hMirror); bDirty=true; }
     if (prefs.getBool("vFlip")!=ci->vFlip)
       { prefs.putBool("vFlip",ci->vFlip); bDirty=true; }
-    if (!prefs.getString("ftpPass").equals(ci->ftpPass))
-      { prefs.putString("ftpPass",ci->ftpPass); bDirty=true; }
-    if (!prefs.getString("ftpUser").equals(ci->ftpUser))
+    if (prefs.getString("ftpUser")!=ci->ftpUser)
       { prefs.putString("ftpUser",ci->ftpUser); bDirty=true; }
     if (prefs.getBool("ftpServerOn")!=ci->ftpServerOn)
       { prefs.putBool("ftpServerOn",ci->ftpServerOn); bDirty=true; }
@@ -335,15 +329,15 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putBool("sMTPTLS",ci->sMTPTLS); bDirty=true; }
     if (prefs.getInt("sMTPPort")!=ci->sMTPPort)
       { prefs.putInt("sMTPPort",ci->sMTPPort); bDirty=true; }
-    if (!prefs.getString("sMTPPassword").equals(ci->sMTPPassword))
+    if (prefs.getString("sMTPPassword")!=ci->sMTPPassword)
       { prefs.putString("sMTPPassword",ci->sMTPPassword); bDirty=true; }
-    if (!prefs.getString("sMTPUsername").equals(ci->sMTPUsername))
+    if (prefs.getString("sMTPUsername")!=ci->sMTPUsername)
       { prefs.putString("sMTPUsername",ci->sMTPUsername); bDirty=true; }
-    if (!prefs.getString("sMTPServer").equals(ci->sMTPServer))
+    if (prefs.getString("sMTPServer")!=ci->sMTPServer)
       { prefs.putString("sMTPServer",ci->sMTPServer); bDirty=true; }
-    if (!prefs.getString("userEmail").equals(ci->userEmail))
+    if (prefs.getString("userEmail")!=ci->userEmail)
       { prefs.putString("userEmail",ci->userEmail); bDirty=true; }
-    if (!prefs.getString("adminEmail").equals(ci->adminEmail))
+    if (prefs.getString("adminEmail")!=ci->adminEmail)
       { prefs.putString("adminEmail",ci->adminEmail); bDirty=true; }
     if (prefs.getBool("sendEmail")!=ci->sendEmail)
       { prefs.putBool("sendEmail",ci->sendEmail); bDirty=true; }
@@ -406,13 +400,13 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Local URL:"+sep+"";
   result += "<a href='http://" + ci->deviceName +".local'>" + ci->deviceName +".local</a>" + suffix;
   result += "<pre>\n";
-
+  
   result += prefix+" *Attribute*     "+sep+" *Value* "+suffix;
   result += prefix+"Device Name      "+sep+"";
   result += ci->deviceName + suffix;
   result += prefix+"WIFI SSID        "+sep+"";
   result += WiFi.SSID() + suffix;
-
+  
   result += prefix+"PSRAM ?          "+sep+"";
   result += (psramFound() ? String("true") : String("false")) +suffix;
   result += prefix+"PSRAM SIZE       "+sep+"";
@@ -467,14 +461,6 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
 #if defined(SD_CARD_ON)
   result += prefix+"saveToSD         "+sep+"";
   result += (ci->saveToSD ? String("true") : String("false"))  + suffix;
-  result += prefix+"ftpPass          "+sep+"";
-  result += String(ci->ftpPass)  + suffix;
-  result += prefix+"ftpUser          "+sep+"";
-  result += String(ci->ftpUser)  + suffix;
-  result += prefix+"ftpServerOn      "+sep+"";
-  result += (ci->ftpServerOn ? String("true") : String("false"))  + suffix;
-  result += prefix+"videoToSDOn      "+sep+"";
-  result += (ci->videoToSDOn ? String("true") : String("false"))  + suffix;
 #endif
 #if defined(BUZZER_PIN)
   result += prefix+"useBuzzer        "+sep+"";
@@ -484,7 +470,12 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += (ci->hMirror ? String("true") : String("false")) + suffix;
   result += prefix+"vFlip            "+sep+"";
   result += (ci->vFlip ? String("true") : String("false"))  + suffix;
-
+  result += prefix+"ftpUser   "+sep+"";
+  result += String(ci->ftpUser)  + suffix;
+  result += prefix+"ftpServerOn   "+sep+"";
+  result += (ci->ftpServerOn ? String("true") : String("false"))  + suffix;
+  result += prefix+"videoToSDOn   "+sep+"";
+  result += (ci->videoToSDOn ? String("true") : String("false"))  + suffix;
   result += prefix+"videoTime   "+sep+"";
   result += String(ci->videoTime)  + suffix;
   result += prefix+"sendVideoOn   "+sep+"";

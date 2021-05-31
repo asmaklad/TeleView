@@ -101,10 +101,6 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 #endif
 #ifndef  SD_CARD_ON
     aux["XsaveToSD"].as<AutoConnectCheckbox>().enable=false;
-    aux["XftpPass"].as<AutoConnectCheckbox>().enable=false;
-    aux["XftpUser"].as<AutoConnectCheckbox>().enable=false;
-    aux["XftpServerOn"].as<AutoConnectCheckbox>().enable=false;
-    aux["XvideoToSDOn"].as<AutoConnectCheckbox>().enable=false;
 #endif
 #ifndef IS_THERE_A_FLASH
     aux["XuseFlash"].as<AutoConnectCheckbox>().enable=false;
@@ -145,11 +141,10 @@ if (!psramFound()){
     configItems.hMirror=(args.hasArg("XhMirror")?true:false);
     configItems.useFlash=(args.hasArg("XuseFlash")?true:false);
     configItems.vFlip=(args.hasArg("XvFlip")?true:false);
-    configItems.ftpPass=(args.hasArg("XftpPass")?args.arg("XftpPass"):"");
-    configItems.ftpUser=(args.hasArg("XftpUser")?args.arg("XftpUser"):"");
+    configItems.ftpUser=(args.hasArg("XftpUser")?args.arg("ftpUser"):"");
     configItems.ftpServerOn=(args.hasArg("XftpServerOn")?true:false);
     configItems.videoToSDOn=(args.hasArg("XvideoToSDOn")?true:false);
-    configItems.videoTime=(args.hasArg("XvideoTime")?args.arg("XvideoTime").toInt():0);
+    configItems.videoTime=(args.hasArg("XvideoTime")?args.arg("videoTime").toInt():0);
     configItems.sendVideoOn=(args.hasArg("XsendVideoOn")?true:false);
 
     configItems.set_whitebal=(args.hasArg("Xset_whitebal")?args.arg("Xset_whitebal").toInt():0);
@@ -190,7 +185,6 @@ if (!psramFound()){
     aux["XuseFlash"].as<AutoConnectCheckbox>().checked=configItems.useFlash;
     aux["XhMirror"].as<AutoConnectCheckbox>().checked=configItems.hMirror;
     aux["XvFlip"].as<AutoConnectCheckbox>().checked=configItems.vFlip;
-    aux["XftpPass"].as<AutoConnectInput>().value=configItems.ftpPass;
     aux["XftpUser"].as<AutoConnectInput>().value=configItems.ftpUser;
     aux["XftpServerOn"].as<AutoConnectCheckbox>().checked=configItems.ftpServerOn;
     aux["XvideoToSDOn"].as<AutoConnectCheckbox>().checked=configItems.videoToSDOn;
@@ -334,6 +328,8 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "global": true
     },
     { "name": "XvFlip","type": "ACCheckbox","value": "","labelPosition": "AC_Infront" ,"label": "Vertical Flip","checked": false,"global": true},
+    { "name": "XftpUser", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "FTP username.","global": true , "placeholder": "ftpUser",  "pattern": "^(.+)$"},
+    { "name": "XftpServerOn", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "start an FTP server for the SD.", "checked": false, "global": true },
     { "name": "XvideoToSDOn", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Save Video to SD.", "checked": false, "global": true },
     { "name": "XvideoTime", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "Duration of video to send in sec.","global": true , "placeholder": "videoTime",  "pattern": "^([+-]?([0-9]*))$"},
     { "name": "XsendVideoOn", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "Send Video on/off.", "checked": false, "global": true },
@@ -391,15 +387,7 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
       "global": true
     },
     {
-      "name": "seperatorFtp",
-      "type": "ACElement",
-      "value": "<hr style='height:1px;border-width:0;color:gray;background-color:#52a6ed'>"
-    },
-    { "name": "XftpServerOn", "type": "ACCheckbox", "value": "", "labelPosition": "AC_Infront" , "label": "start an FTP server for the SD.", "checked": false, "global": true },
-    { "name": "XftpUser", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "FTP username.","global": true , "placeholder": "ftpUser",  "pattern": "^(.+)$" ,"apply": "text"},
-    { "name": "XftpPass", "type": "ACInput", "value": "", "labelPosition": "AC_Infront" , "label": "FTP Password.","global": true , "placeholder": "ftpPass",  "pattern": "^(.+)$" ,"apply": "password"},
-    {
-      "name": "seperatorEmail",
+      "name": "seperator3",
       "type": "ACElement",
       "value": "<hr style='height:1px;border-width:0;color:gray;background-color:#52a6ed'>"
     },

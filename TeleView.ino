@@ -49,11 +49,11 @@
 //#define CAMERA_MODEL_M5STACK_PSRAM        // Board definition Boards->ESP32 Arduino->"M5Stack Timer-CAM"
                                           //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
 //#define CAMERA_MODEL_M5STACK_WIDE
-//#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
+#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
 //#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
                                         // to Have OTA Working:
                                         // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
-#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
+//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 
@@ -96,10 +96,61 @@ boolean bMotionDetected=false;
 boolean bESPMayGoToSleep=false;
 Ticker tkTimeLapse;
 int consequentChangedFrames=0;
+int count_ftp = 0;
+int count_ftp2 = 0;
 
 // struct tm *startTM; you find it in webPages.h
 
 esp_sleep_wakeup_cause_t print_wakeup_reason();
+
+//****************************************************************//
+#ifdef SD_CARD_ON
+  #include "ESP32FtpServer.h"
+  // MicroSD
+  #include "driver/sdmmc_host.h"
+  #include "driver/sdmmc_defs.h"
+  #include "sdmmc_cmd.h"
+  #include "esp_vfs_fat.h"
+  #include <SD_MMC.h>
+  FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
+  TaskHandle_t CameraTask, AviWriterTask, FtpTask;
+  int diskspeed = 0;
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //
+  // FtpTask runs on cpu 0 to respond to ftp
+  //
+  void codeForFtpTask( void * parameter )
+  {
+    uint32_t ulNotifiedValue;
+    Serial.print("ftp, core ");  Serial.print(xPortGetCoreID());
+    Serial.print(", priority = "); Serial.println(uxTaskPriorityGet(NULL));
+
+    for (;;) {
+      ftpSrv.handleFTP();
+      count_ftp++;
+      delay(1);
+
+    }
+  }
+  //****************************************************************//
+  static esp_err_t init_sdcard()
+  {
+
+    //pinMode(12, PULLUP);
+    pinMode(13, PULLUP);
+    //pinMode(4, OUTPUT);
+
+    if(!SD_MMC.begin()){
+      Serial.println("SD Card Mount Failed");
+    }else{
+      Serial.print("SD_MMC Begin: ");
+    }
+    //pinMode(13, PULLDOWN);
+    //pinMode(13, INPUT_PULLDOWN);
+  }
+#endif
+
+
 
 //****************************************************************//
 void setup() {
@@ -233,7 +284,7 @@ void setup() {
   }
   // Add service to MDNS-SD
   // With applying AutoConnect, the MDNS service must be started after
-  // establishing a WiFi connection.  
+  // establishing a WiFi connection.
   MDNS.addService("http", "tcp", 80);
   Serial.println("mDNS responder started");
   /////////////////////////////
@@ -319,7 +370,30 @@ void setup() {
 #if defined(BUZZER_PIN)
   pinMode(BUZZER_PIN,OUTPUT);
 #endif
+
   bTelegramBotInitiated=true;
+
+#ifdef SD_CARD_ON
+  //plm print_ram();  delay(2000);
+  //****************************************************************//
+
+  if (configItems.ftpServerOn) {
+    Serial.println("Starting ftp ...");
+    init_sdcard();
+    ftpSrv.begin(configItems.ftpUser, configItems.ftpPass);
+    xTaskCreatePinnedToCore(
+      codeForFtpTask,
+      "FtpTask",
+      4096,       // heap
+      NULL,
+      4,          // prio higher than 1
+      &FtpTask,
+      0);         // on cpu 0
+
+    delay(20);
+  }
+
+#endif
 }
 //****************************************************************//
 //**********************   The LOOP   ****************************//

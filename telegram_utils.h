@@ -8,7 +8,7 @@
 #include "webPages.h"
 #include <ArduinoJson.h>
 #include <ESP_Mail_Client.h>
-
+#include "video_utils.h"
 
 #if defined(SD_CARD_ON)
 #include "FS.h"                // SD Card ESP32
@@ -41,23 +41,32 @@ boolean bSetLapseMode=false;
 
 ////////////////////////////////////////////////
 String alertTelegram(String msg,boolean messageOnly=false);
-String sendCapturedImage2Telegram2(String chat_id,String messageText="",uint16_t message_id=0);
-void handleNewMessages(int numNewMessages);
 String formulateKeyboardJson();
-
+void smtpCallback(SMTP_Status status);
+String formulateResolutionInlineKeyBoard();
+String formulateOptionsInlineKeyBoard();
+void handleNewMessages(int numNewMessages);
+void sendEmailPhoto(camera_fb_t * fb ,String espMessage="Teleview Photo");
+String sendCapturedImage2Telegram2(String chat_id,String messageText="",uint16_t message_id=0);
+String savePhotoToSD(String messageText, camera_fb_t *fb);
+void captureVideo(char * aviFileName,String messageText);
+String sendVideoFileTelegram(String chat_id,String messageText ,
+                        uint16_t message_id,String fileName);
+char aviFileName[100];
 /*
 bool isMoreDataAvailable();
 byte *getNextBuffer();
 int getNextBufferLen();
 bool dataAvailable = false;
-//uint8_t photoNextByte();
-*/
-////////////////////////////////////////////////
 int Counter_isMoreDataAvailable=0;
 int Counter_getNextBuffer=0;
 int Counter_getNextBufferLen=0;
+//uint8_t photoNextByte();
+*/
+////////////////////////////////////////////////
+
 ///////////////////////////////////////////////
-String alertTelegram(String msg,boolean messageOnly){
+String alertTelegram(String msg,bool messageOnly){
     String result="";
     #ifdef CAMERA_MODEL_M5STACK_PSRAM
       msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
@@ -67,6 +76,15 @@ String alertTelegram(String msg,boolean messageOnly){
       bot.sendMessage(configItems.adminChatIds, msg,"" );
     }else{
       result= sendCapturedImage2Telegram2(configItems.adminChatIds,msg);
+      if (configItems.sendVideoOn) {
+        captureVideo(aviFileName,msg);
+        Serial.print("\nalertTelegram:File name will be >"); Serial.print(fname); Serial.println("<");
+        Serial.printf("Video File to send: %s\n",aviFileName);
+        result=sendVideoFileTelegram(configItems.adminChatIds,
+                          msg,
+                          0,
+                          aviFileName);
+      }
     }
     if (configItems.alertALL && configItems.userChatIds. toDouble()>0){
       if (messageOnly){
@@ -75,6 +93,7 @@ String alertTelegram(String msg,boolean messageOnly){
         String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
       }
     }
+    Serial.print("result:");
     Serial.println(result);
     return(result);
 }
@@ -359,6 +378,14 @@ void handleNewMessages(int numNewMessages) {
               msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
             #endif
             String result= sendCapturedImage2Telegram2(chat_id,msg,message_id);
+            if (configItems.sendVideoOn) {
+              captureVideo(aviFileName,msg);
+              Serial.printf("Video File to send: %s\n",aviFileName);
+              result=sendVideoFileTelegram(chat_id,
+                                msg,
+                                message_id,
+                                aviFileName);
+            }
             Serial.println("result: "+result);
           }
           Serial.println("handleNewMessages/sendPhoto:END");
@@ -445,7 +472,7 @@ void handleNewMessages(int numNewMessages) {
 }
 
 ///////////////////////////////////////////////
-void sendEmailPhoto(camera_fb_t * fb ,String espMessage="Teleview Photo"){
+void sendEmailPhoto(camera_fb_t * fb ,String espMessage){
   /** Enable the debug via Serial port
    * none debug or 0
    * basic debug or 1
@@ -569,7 +596,8 @@ void sendEmailPhoto(camera_fb_t * fb ,String espMessage="Teleview Photo"){
 }
 
 ///////////////////////////////////////////////
-String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t message_id) {
+String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t message_id) 
+{
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
   StaticJsonDocument<2048> doc;
@@ -620,9 +648,19 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
     botClient.stop();
   }
   // Connect with api.telegram.org if not already connected
+  if (WiFi.status() != WL_CONNECTED){
+    #ifdef TELEGRAM_DEBUG
+        Serial.println("Wifi is Not Connected.");
+    #endif
+  }else{
+    #ifdef TELEGRAM_DEBUG
+        Serial.print("Wifi is Connected:");
+        Serial.println(WiFi.localIP());
+    #endif
+  }
   if (!botClient.connected()) {
     #ifdef TELEGRAM_DEBUG
-        Serial.println(F("[BOT Client]Connecting to server"));
+        Serial.printf("[BOT Client]Connecting to server: %s:%d \n",TELEGRAM_HOST, TELEGRAM_SSL_PORT);
     #endif
     if (!botClient.connect(TELEGRAM_HOST, TELEGRAM_SSL_PORT)) {
       #ifdef TELEGRAM_DEBUG
@@ -755,8 +793,52 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
       sendEmailPhoto(fb,messageText);
     }
   }
-  // saving to SD card.
 #if defined(SD_CARD_ON)
+  // saving to SD card.
+  if (configItems.saveToSD) {
+    result= savePhotoToSD(messageText,fb);
+  }
+#endif
+esp_camera_fb_return(fb);
+#if defined(FLASH_LAMP_PIN)
+    if (configItems.useFlash){
+      delay(10);
+      digitalWrite(FLASH_LAMP_PIN, LOW);
+      Serial.println("Flash-lamp OFF");
+    }
+#endif
+
+#if defined(USE_OLED_AS_FLASH)
+  display_Clear();
+#endif
+  if (!result.equals("success")){
+    bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB:"+result,"" );
+  }
+  return(result);
+}
+/////////////////////////////////////////////////////////////////////////
+void captureVideo(char *aviFileName,String messageText=""){
+  Serial.println("captureVideo#1");
+  if (configItems.videoToSDOn){
+    esp_err_t ESP_STATUS;
+    long startAViTime=millis();
+    recording = 1;
+    make_avi(aviFileName);
+    Serial.print("\ncaptureVideo:File name will be >"); Serial.print(aviFileName); Serial.println("<");
+    //keep adding frames till the VideoTime passes
+    while((millis()-startAViTime)<configItems.videoTime*1000){
+      make_avi(aviFileName);
+    }
+    recording = 0;
+    make_avi(aviFileName);
+    Serial.println("captureVideo#4");
+  }
+  //return ( aviFileName );
+}
+/////////////////////////////////////////////////////////////////////////
+#if defined(SD_CARD_ON)
+String savePhotoToSD(String messageText, camera_fb_t *fb){
+  String result="";
   if (configItems.saveToSD) {
     Serial.println("Saving to SD Card.");
     if(!SD_MMC.begin()){
@@ -793,25 +875,174 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
         file.close();
       }
     }
-#if defined(FLASH_LAMP_PIN)
-    if (configItems.useFlash){
-      delay(10);
-      digitalWrite(FLASH_LAMP_PIN, LOW); 
-      Serial.println("Flash-lamp OFF");
-    }
-#endif
-  }
-#endif
-  esp_camera_fb_return(fb);
-
-#if defined(USE_OLED_AS_FLASH)
-  display_Clear();
-#endif
-  if (!result.equals("success")){
-    bot.sendMessage(chat_id, String("Photo sent:"+String(fb_width)+"x"+String(fb_height))+","+String(fbLen/1024)+" KB:"+result,"" );
   }
   return(result);
 }
+
+/**********************************************/
+String sendVideoFileTelegram(String chat_id,String messageText ,
+                        uint16_t message_id,String fileName){
+  #define TEL_BUF_SIZE 1024
+  uint8_t buf[ TEL_BUF_SIZE ];
+  String result="Success";
+
+  Serial.printf("chat_id:%s\n" ,chat_id.c_str());
+  Serial.printf("messageText:%s\n",messageText.c_str());
+  Serial.printf("message_id:%d\n",message_id);
+  Serial.printf("fileName:%s\n",fileName.c_str());
+
+  if(!SD_MMC.begin()){
+    Serial.println("SD Card Mount Failed");
+    result="SD Card Mount Failed";
+  }else{
+    uint8_t cardType = SD_MMC.cardType();
+    if(cardType == CARD_NONE){
+      Serial.println("No SD Card attached");
+      result="No SD Card attached";
+    }else{
+      #ifdef TELEGRAM_DEBUG
+        if (WiFi.status() != WL_CONNECTED){
+          Serial.println("Wifi is Not Connected.");
+        }else{
+          Serial.print("Wifi is Connected:");
+          Serial.println(WiFi.localIP());
+        }
+        Serial.print("bot.getToken():");
+        Serial.println(bot.getToken());
+        bot.getMe();
+        Serial.print("bot.name:");
+        Serial.println(bot.name);
+        Serial.print("bot.userName:");
+        Serial.println(bot.userName);
+      #endif
+      Serial.println("sendChatAction#1");
+      bot.sendChatAction(chat_id, "upload_video");
+      // reset the client connection
+      if (botClient.connected()) {
+        #ifdef TELEGRAM_DEBUG
+            Serial.println(F("Closing client"));
+        #endif
+        botClient.stop();
+      }
+      Serial.println("botClient.connected()");
+      // Connect with api.telegram.org if not already connected
+      if (!botClient.connected()) {
+        #ifdef TELEGRAM_DEBUG
+            Serial.printf("[BOT Client]Connecting to server: %s:%d \n",TELEGRAM_HOST, TELEGRAM_SSL_PORT);
+        #endif
+        if (!botClient.connect(TELEGRAM_HOST, TELEGRAM_SSL_PORT)) {
+          #ifdef TELEGRAM_DEBUG
+            Serial.println(F("[BOT Client]Conection error"));
+          #endif
+        }
+      }
+      fs::FS &fs = SD_MMC;
+      Serial.printf("fileName:%s\n",fileName.c_str());
+      if(fileName.startsWith("/sdcard")){
+        fileName.replace("/sdcard","");
+      }
+      Serial.printf("fileName:%s\n",fileName.c_str());
+      File file = fs.open(fileName.c_str(), FILE_READ);
+      if(!file){
+        Serial.println("Failed to open file in reading mode");
+      } else {
+        const char* myDomain = "api.telegram.org";
+        String getAll="", getBody = "";
+        String head ="";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id +"\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" +
+                  String(file.name())+" "+file.size() +" B"+
+                  ","+messageText+
+                  "\r\n";
+        if (message_id>0)
+          head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"reply_to_message_id\"; \r\n\r\n" + String(message_id) +"\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"parse_mode\"; \r\n\r\nMarkdown\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"duration\"; \r\n\r\n"+String(configItems.videoTime)+"\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"width\"; \r\n\r\n240\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"height\"; \r\n\r\n240\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"supports_streaming\"; \r\n\r\nTrue\r\n";
+        head += "--ef2ac69f9149220e889abc22b81d1401\r\nContent-Disposition: form-data; name=\"video\"; filename=\""+String(file.name())+"\"\r\n";
+
+        String tail = "\r\n--ef2ac69f9149220e889abc22b81d1401--\r\n";
+
+        uint32_t imageLen = file.size();
+        uint32_t extraLen = head.length() + tail.length();
+        uint32_t totalLen = imageLen + extraLen;
+
+        botClient.println("POST /bot"+configItems.botTTelegram+"/sendVideo HTTP/1.1");
+        botClient.println("Host: " + String(myDomain));
+        botClient.println("Connection: keep-alive");
+        botClient.println("Content-Length: " + String(totalLen));
+        botClient.println("Content-Type: multipart/form-data; boundary=ef2ac69f9149220e889abc22b81d1401");
+        botClient.println();
+        botClient.print(head);
+        botClient.println();
+
+        size_t sentB =0;
+        for (size_t n=0;n<file.size();n=n+TEL_BUF_SIZE) {
+          if (n+TEL_BUF_SIZE<file.size()) {
+            Serial.print("_");
+            int16_t nb = file.readBytes((char *) buf, TEL_BUF_SIZE);
+            botClient.write(buf, TEL_BUF_SIZE);
+            sentB += TEL_BUF_SIZE;
+          }
+          else if (file.size()%TEL_BUF_SIZE>0) {
+            Serial.print("+");
+            size_t remainder = file.size()%TEL_BUF_SIZE;
+            int16_t nb = file.readBytes((char *)buf, remainder);
+            botClient.write(buf, remainder);
+            sentB += remainder;
+          }
+          if(botClient.connected())
+            Serial.print("*");
+          else
+            Serial.print("X");
+        }
+        Serial.println("/");
+        botClient.print(tail);
+        /*********************************/
+        int waitTime = 10000;   // timeout 10 seconds
+        long startTime = millis();
+        boolean state = false;
+
+        while ((startTime + waitTime) > millis())
+        {
+          Serial.print(".");
+          delay(100);
+          while (botClient.available())
+          {
+              char c = botClient.read();
+              if (state==true) {
+                getBody += String(c);
+              }
+              /*
+              else{
+                botClient.write(fbBufX,oneByte);
+              }
+              */
+              if (c == '\n')
+              {
+                if (getAll.length()==0) state=true;
+                getAll = "";
+              }
+              else if (c != '\r')
+                getAll += String(c);
+              startTime = millis();
+          }
+          if (getBody.length()>0) break;
+        }
+        Serial.println("");
+        Serial.print("sendVideoFileTelegram:getBody: ");
+        Serial.println(getBody);
+        Serial.println();
+
+      }
+      file.close();
+    }
+  }
+  return(result);
+}
+#endif
 
 
 #endif //TELEGRAM_UTILS_H

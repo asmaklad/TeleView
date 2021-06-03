@@ -113,7 +113,7 @@ esp_sleep_wakeup_cause_t print_wakeup_reason();
   #include "esp_vfs_fat.h"
   #include <SD_MMC.h>
   FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
-  TaskHandle_t CameraTask, AviWriterTask, FtpTask;
+  TaskHandle_t FtpTask;
   int diskspeed = 0;
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   //

@@ -178,7 +178,7 @@ if (!psramFound()){
     applyConfigItem(&configItems);
     saveConfiguration(&configItems);
     result="Saved";
-  }else if (args.size()==0) { 
+  }else if (args.size()==0) {
     // no arguments wehere provided, then we need to load
     result="Load Error";
     aux.fetchElement();

@@ -905,8 +905,9 @@ if (data.connected())
   if (nb > 0)
     {
     data.write((uint8_t*)buf, nb);
+    data.flush();
     bytesTransfered += nb;
-    Serial.print(" - ");Serial.print(bytesTransfered);
+    Serial.print(" - ");Serial.println(bytesTransfered);
     return true;
   }
 }

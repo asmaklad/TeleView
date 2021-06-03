@@ -96,9 +96,8 @@ struct config_item {
   String ftpUser;
   boolean ftpServerOn;
   boolean videoToSDOn;
-  int videoTime;
+  long videoTime;
   boolean sendVideoOn;
-  int sendVideo;
   int set_whitebal;
   int set_saturation;
   int set_contrast;
@@ -138,7 +137,6 @@ struct config_item {
   .videoToSDOn = false,
   .videoTime = 0,
   .sendVideoOn = false,
-  .sendVideo = 0,
   .set_whitebal = 1,
   .set_saturation = 0,
   .set_contrast = 0,
@@ -250,7 +248,6 @@ config_item loadConfiguration() {
     ci.videoToSDOn = prefs.getBool("videoToSDOn",configItems.videoToSDOn);
     ci.videoTime = prefs.getInt("videoTime",configItems.videoTime);
     ci.sendVideoOn = prefs.getBool("sendVideoOn",configItems.sendVideoOn);
-    ci.sendVideo = prefs.getInt("sendVideo",configItems.sendVideo);
     ci.set_whitebal = prefs.getInt("set_whitebal",configItems.set_whitebal);
     ci.set_saturation = prefs.getInt("set_saturation",configItems.set_saturation);
     ci.set_contrast = prefs.getInt("set_contrast",configItems.set_contrast);
@@ -293,7 +290,7 @@ boolean saveConfiguration(config_item* ci) {
   Serial.println("saveConfiguration:EEPROM Write:start");
   boolean bDirty=false;
   if (!prefs.begin("settings",false)){
-    Serial.println("failed find settings prefrences! returning default."); 
+    Serial.println("failed find settings prefrences! returning default.");
     prefs.end();
     return (false);
   }else{
@@ -317,8 +314,6 @@ boolean saveConfiguration(config_item* ci) {
       { prefs.putInt("videoTime",ci->videoTime); bDirty=true; }
     if (prefs.getBool("sendVideoOn")!=ci->sendVideoOn)
       { prefs.putBool("sendVideoOn",ci->sendVideoOn); bDirty=true; }
-    if (prefs.getInt("sendVideo")!=ci->sendVideo)
-      { prefs.putInt("sendVideo",ci->sendVideo); bDirty=true; }
 
     if (prefs.getInt("set_whitebal")!=ci->set_whitebal)
       { prefs.putInt("set_whitebal",ci->set_whitebal); bDirty=true; }
@@ -422,17 +417,17 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"compileDate      "+sep+"";
   result += compileDate +suffix;
   result += prefix+"compileTime      "+sep+"";
-  
+
   result += compileTime +suffix;
   result += prefix+"compileCompiler  "+sep+"";
   result += compileCompiler +suffix;
-  
+
   result += prefix+"Chip Model       "+sep+"";
   result += ESP.getChipModel()  +suffix;
-  
+
   result += prefix+"Chip Revision    "+sep+"";
   result += ESP.getChipRevision()  +suffix;
-  
+
   result += prefix+"Chip Cores       "+sep+"";
   result += ESP.getChipCores()  +suffix;
   //////////////////////////////////////////////
@@ -449,7 +444,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"Current Time     "+sep+"";
   result += String(dateTime)  +suffix;
   //////////////////////////////////////////////
-  
+
 #if defined(IS_THERE_A_FLASH)
   result += prefix+"useFlash         "+sep+"";
   result += (ci->useFlash ? String("true") : String("false")) +suffix;
@@ -489,8 +484,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += String(ci->videoTime)  + suffix;
   result += prefix+"sendVideoOn   "+sep+"";
   result += (ci->sendVideoOn ? String("true") : String("false"))  + suffix;
-  result += prefix+"sendVideo   "+sep+"";
-  result += String(ci->sendVideo)  + suffix;
+
   //result += prefix+"set_whitebal     "+sep+"";
   //result += String(ci->set_whitebal)  + suffix;
   result += prefix+"set_saturation   "+sep+"";
@@ -516,7 +510,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"adminEmail       "+sep+"";
   result += String(ci->adminEmail)  + suffix;
   result += prefix+"sendEmail        "+sep+"";
-  
+
   result += (ci->sendEmail ? String("true") : String("false"))  + suffix;
   result += prefix+"motionDetectCV   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;

@@ -114,11 +114,11 @@ void smtpCallback(SMTP_Status status)
         {
             /* Get the result item */
             SMTP_Result result = smtp.sendingResult.getItem(i);
-            localtime_r(&result.timesstamp, &dt);
+            //localtime_r(&result.timesstamp, &dt);
 
             Serial.printf("Message No: %d\n", i + 1);
             Serial.printf("Status: %s\n", result.completed ? "success" : "failed");
-            Serial.printf("Date/Time: %d/%d/%d %d:%d:%d\n", dt.tm_year + 1900, dt.tm_mon + 1, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
+            //Serial.printf("Date/Time: %d/%d/%d %d:%d:%d\n", dt.tm_year + 1900, dt.tm_mon + 1, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
             Serial.printf("Recipient: %s\n", result.recipients);
             Serial.printf("Subject: %s\n", result.subject);
         }
@@ -755,7 +755,7 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
         char    dateTime[100];
         t = time(NULL);
         tm = localtime(&t);
-        sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d\0",
+        sprintf(dateTime, "-%04d%02d%02d_%02d%02d%02d",
           tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday, 
           tm->tm_hour, tm->tm_min, tm->tm_sec);
         // Path where new picture will be saved in SD Card
@@ -768,9 +768,9 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
         } else {
           file.write(fb->buf, fb->len); // payload (image), payload length
           Serial.printf("Saved file to path: %s\n", path.c_str());
-          Serial.printf("Card Size: %d\n",SD_MMC.cardSize());
-          Serial.printf("Total KBytes: %d\n",SD_MMC.totalBytes()/1024);
-          Serial.printf("Used KBytes: %d\n",SD_MMC.usedBytes()/1024);
+          Serial.printf("Card Size: %llu\n",SD_MMC.cardSize());
+          Serial.printf("Total KBytes: %llu\n",SD_MMC.totalBytes()/1024);
+          Serial.printf("Used KBytes: %llu\n",SD_MMC.usedBytes()/1024);
         }
         file.close();
       }

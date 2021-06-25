@@ -400,7 +400,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   t = time(NULL);
   tm = localtime(&t);
 
-  sprintf(dateTime, "%04d-%02d-%02d %02d:%02d:%02d\0",
+  sprintf(dateTime, "%04d-%02d-%02d %02d:%02d:%02d",
     tm->tm_year + 1900, tm->tm_mon+1 , tm->tm_mday,
     tm->tm_hour, tm->tm_min, tm->tm_sec);
 
@@ -497,7 +497,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   if (timeOfLastPhoto>0){
     t = time(NULL)-timeOfLastPhoto;
     tm = localtime(&t);
-    sprintf(dateTime, "%02d Y %02d Mon %02d D,%02d H:%02d Min:%02d S\0",
+    sprintf(dateTime, "%02d Y %02d Mon %02d D,%02d H:%02d Min:%02d S",
       tm->tm_year + 1900-1970, tm->tm_mon , tm->tm_mday-1,
       tm->tm_hour, tm->tm_min, tm->tm_sec);
     result += String(dateTime)+suffix;

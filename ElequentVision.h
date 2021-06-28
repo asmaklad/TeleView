@@ -54,10 +54,8 @@ void loop() {
     Serial.println("=================");
 }
 
-
-/**
- *
  */
+
 bool setup_camera(framesize_t frameSize) {
 
     sensor_t *sensor = esp_camera_sensor_get();

@@ -70,7 +70,7 @@ int PICTURES_COUNT=0;
 
 //////////////////////////////////////
 #include "persist.h"
-boolean applyConfigItem (config_item* ci);
+void applyConfigItem (config_item* ci);
 #include "webPages.h"
 #include "ElequentVision.h"
 
@@ -499,7 +499,7 @@ void tick(){
   bTakePhotoTick=true;
 }
 ////////////////////////////////////////////////////////////////////////////
-boolean applyConfigItem (config_item* ci) {
+void applyConfigItem (config_item* ci) {
   sensor_t * s = esp_camera_sensor_get();
   //
   s->set_pixformat(s, PIXFORMAT_JPEG );

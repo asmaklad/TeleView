@@ -480,7 +480,7 @@ void rootPage() {
   ///////
   timeB=time(NULL); // now
   tmNowTM = localtime(&timeB);
-  sprintf(dateTime, "%02d/%02d/%02d, %02d:%02d:%02d\0",
+  sprintf(dateTime, "%02d/%02d/%02d, %02d:%02d:%02d",
     tmNowTM->tm_mday,
     tmNowTM->tm_mon+1,
     tmNowTM->tm_year+1900,
@@ -491,10 +491,10 @@ void rootPage() {
   content.replace("{{CURRENT_TIME}}", String(dateTime));
   ///////
   currentTimeMills=millis()/1000L;
-  Serial.printf("timeB:%d\n",timeB);
-  Serial.printf("currentTimeMills:%d\n",currentTimeMills);
+  Serial.printf("timeB:%d\n",(int)timeB);
+  Serial.printf("currentTimeMills:%d\n",(int)currentTimeMills);
   tmDiffTM = gmtime (&currentTimeMills);
-  sprintf(dateTime, "%02d Years, %02d Months, %02d Days,  %02d Hrs :%02d Min :%02d Sec\0",
+  sprintf(dateTime, "%02d Years, %02d Months, %02d Days,  %02d Hrs :%02d Min :%02d Sec",
     tmDiffTM->tm_year -70,
     tmDiffTM->tm_mon ,
     tmDiffTM->tm_mday -1,

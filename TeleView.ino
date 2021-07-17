@@ -53,7 +53,10 @@
 //#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
                                         // to Have OTA Working:
                                         // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
-#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
+#define CAMERA_MODEL_TTGO_T1_CAMERA_162     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+                                        // to Have OTA Working:
+                                        // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
+//#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
 //////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 

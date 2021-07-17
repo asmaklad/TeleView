@@ -174,6 +174,39 @@
 #define PIR_PIN           33 //GPIO_INPUT_IO_33 //AS312
 #define PIR_PIN_ON        HIGH
 #define BUTTON_PIN        34
+#elif defined(CAMERA_MODEL_TTGO_T1_CAMERA_162) // Board definition "LILYGO T1 v1.6.2 White with Mic"
+#define PWDN_GPIO_NUM     -1
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM     4
+#define SIOD_GPIO_NUM     18
+#define SIOC_GPIO_NUM     23
+
+#define Y9_GPIO_NUM       36
+#define Y8_GPIO_NUM       37
+#define Y7_GPIO_NUM       38
+#define Y6_GPIO_NUM       39
+#define Y5_GPIO_NUM       35
+#define Y4_GPIO_NUM       14
+#define Y3_GPIO_NUM       13
+#define Y2_GPIO_NUM       34
+#define VSYNC_GPIO_NUM    5
+#define HREF_GPIO_NUM     27
+#define PCLK_GPIO_NUM     25
+#define MAX_RESOULTION   FRAMESIZE_UXGA
+
+#define SDA_PIN 21
+#define SCL_PIN 22
+
+#define I2C_DISPLAY_ADDR  0x3c
+#define USE_OLED_AS_FLASH 1 // the OLEDis on the same side as the camera
+//#define I2C_BME280_ADDR   0x3d
+#define PIR_PIN           19 
+#define PIR_PIN_ON        HIGH
+#define BUTTON_PIN        15
+
+#define MIC_SCK           26
+#define MIC_WS            32
+#define MIC_SDO           33
 
 #else
 #error "Camera model not selected"

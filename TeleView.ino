@@ -46,18 +46,18 @@
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
 //#define CAMERA_MODEL_ESP_EYE
-//#define CAMERA_MODEL_M5STACK_PSRAM        // Board definition Boards->ESP32 Arduino->"M5Stack Timer-CAM"
+//#define CAMERA_MODEL_M5STACK_PSRAM      // Board definition Boards->ESP32 Arduino->"M5Stack Timer-CAM"
                                           //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
 //#define CAMERA_MODEL_M5STACK_WIDE
 //#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
-                                        // to Have OTA Working:
-                                        // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
-#define CAMERA_MODEL_TTGO_T1_CAMERA_162     // Board definition "ESP32 WROVER Module" or "TTGO T1"
-                                        // to Have OTA Working:
-                                        // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
+#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+                                          // to Have OTA Working:
+                                          // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
+//#define CAMERA_MODEL_TTGO_T1_CAMERA_162   // Board definition "ESP32 WROVER Module" or "TTGO T1"
+                                          // to Have OTA Working:
+                                          // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
 //#define CAMERA_MODEL_M5CAM              // Board Difinition  "AI Thinker ESP32-CAM"
-//////////////////////////////////////                                          // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
+//////////////////////////////////////    // and set Tools-> Partiton Scheme --> Huge App (3MB No OTA/1MB SPIFF)
 #include "camera_pins.h"
 
 framesize_t maxRes=MAX_RESOULTION;
@@ -75,7 +75,7 @@ int PICTURES_COUNT=0;
 #include "persist.h"
 void applyConfigItem (config_item* ci);
 #include "webPages.h"
-#include "ElequentVision.h"
+#include "motionDetect.h"
 
 #if defined(I2C_DISPLAY_ADDR)
 #include "display.h"
@@ -90,7 +90,7 @@ void applyConfigItem (config_item* ci);
 #endif
 */
 
-char* ntpServer = "pool.ntp.org";
+const char* ntpServer = "pool.ntp.org";
 long  gmtOffset_sec = 0;
 int   daylightOffset_sec = 0;
 
@@ -100,6 +100,27 @@ boolean bESPMayGoToSleep=false;
 Ticker tkTimeLapse;
 int consequentChangedFrames=0;
 
+//motionDetection
+bool debug = true;
+#define THIS_FRAME FRAMESIZE_SVGA // JPEG frames size to be retrieved
+uint8_t fsizePtr = THIS_FRAME; // framesize selection
+uint8_t lightLevel; // Current ambient light level 
+uint8_t nightSwitch = 10; // white level % for night/day switching
+uint8_t motionVal = 7; // motion sensitivity difference setting
+extern const frameStruct frameData[] = {
+  {"QQVGA", 160, 120, 25, 2, 1},
+  {"n/a", 0, 0, 0, 0, 1}, 
+  {"n/a", 0, 0, 0, 0, 1}, 
+  {"HQVGA", 240, 176, 25, 3, 1}, 
+  {"QVGA", 320, 240, 25, 3, 1}, 
+  {"CIF", 400, 296, 25, 3, 1},
+  {"VGA", 640, 480, 15, 3, 2}, 
+  {"SVGA", 800, 600, 10, 3, 2}, 
+  {"XGA", 1024, 768, 5, 3, 3}, 
+  {"SXGA", 1280, 1024, 3, 3, 4}, 
+  {"UXGA", 1600, 1200, 2, 6, 5}  
+};
+bool haveMotion = false;
 // struct tm *startTM; you find it in webPages.h
 
 esp_sleep_wakeup_cause_t print_wakeup_reason();
@@ -108,6 +129,8 @@ esp_sleep_wakeup_cause_t print_wakeup_reason();
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
+  Serial.println("START: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+  Serial.println(CAMERA_NAME);
 #ifdef CAMERA_MODEL_M5STACK_PSRAM
 // will hold bat output
   bat_init();
@@ -152,18 +175,36 @@ void setup() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  //init with high specs to pre-allocate larger buffers
-  if(psramFound()){
-    maxRes=MAX_RESOULTION;
-    config.frame_size = FRAMESIZE_UXGA;
-    config.jpeg_quality = 10;  //0-63 lower number means higher quality
-    config.fb_count = 2;
+  //config.pixel_format = PIXFORMAT_RGB565; // for face detection/recognition
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.jpeg_quality = 12;
+  config.fb_count = 1;
+  
+  // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
+  //                      for larger pre-allocated frame buffer.
+  if(config.pixel_format == PIXFORMAT_JPEG){
+    if(psramFound()){
+      config.jpeg_quality = 10;
+      config.fb_count = 2;
+      config.grab_mode = CAMERA_GRAB_LATEST;
+    } else {
+      // Limit the frame size when PSRAM is not available
+      config.frame_size = FRAMESIZE_SVGA;
+      config.fb_location = CAMERA_FB_IN_DRAM;
+    }
   } else {
-    maxRes=FRAMESIZE_SVGA;
-    config.frame_size = FRAMESIZE_SVGA;
-    config.jpeg_quality = 12;  //0-63 lower number means higher quality
-    config.fb_count = 1;
+    // Best option for face detection/recognition
+    config.frame_size = FRAMESIZE_240X240;
+#if CONFIG_IDF_TARGET_ESP32S3
+    config.fb_count = 2;
+#endif
   }
+
+#if defined(CAMERA_MODEL_ESP_EYE)
+  pinMode(13, INPUT_PULLUP);
+  pinMode(14, INPUT_PULLUP);
+#endif
   Serial.print("frame_size: ");
   Serial.println( String(resolutions[config.frame_size][0]+":"+resolutions[config.frame_size][1]) );
   Serial.print("jpeg_quality: ");
@@ -171,7 +212,7 @@ void setup() {
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
+    Serial.printf("Camera init failed with error 0x%x\n", err);
     delay(1000);
     ESP.restart();
   }
@@ -181,7 +222,7 @@ void setup() {
   keyboardJson=formulateKeyboardJson();
   configItems=loadConfiguration();
   applyConfigItem(&configItems);
-  Serial.println(printConfiguration(&configItems,""));
+  Serial.println(printConfiguration(&configItems,strEmpty));
   ////////////////////////////
 #if defined(I2C_DISPLAY_ADDR)
   display_init();
@@ -198,7 +239,7 @@ void setup() {
   Portal.host().on("/capture.jpg",capturePageJpeg);
   //
   auxPageConfig.load(AUX_CONFIGPAGE);
-    populateResolutionsSelects(auxPageConfig);
+  populateResolutionsSelects(auxPageConfig);
   auxPageConfig.on(onPage);
   //
   auxPageCapture.load(AUX_CAPTURE);
@@ -227,21 +268,22 @@ void setup() {
   line3=String(acConfig.apip.toString());
   display_Textlines(line1,line2,line3);
 #endif
-  //MDNS
-  if (!MDNS.begin(configItems.deviceName.c_str())) {
-      Serial.println("Error setting up MDNS responder!");
-      while(1) {
-          delay(1000);
-      }
-  }
-  // Add service to MDNS-SD
-  // With applying AutoConnect, the MDNS service must be started after
-  // establishing a WiFi connection.  
-  MDNS.addService("http", "tcp", 80);
-  Serial.println("mDNS responder started");
+  
   /////////////////////////////
   if (Portal.begin()) {
     Serial.println("WiFi connected: " + WiFi.localIP().toString());
+    //MDNS
+    if (!MDNS.begin(configItems.deviceName.c_str())) {
+        Serial.println("Error setting up MDNS responder!");
+        while(1) {
+            delay(1000);
+        }
+    }
+    // Add service to MDNS-SD
+    // With applying AutoConnect, the MDNS service must be started after
+    // establishing a WiFi connection.  
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS responder started");
   }else{
     Serial.println("Portal not startd");
   }
@@ -299,15 +341,32 @@ void setup() {
     bmm8563_setTime(&timeToSet);
   #endif
   ///////////////////////////////////
+  botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   botClient.setInsecure();
-  //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.updateToken(configItems.botTTelegram);
-  //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
-  bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
-  if (configItems.alertALL && configItems.userChatIds.toDouble()>0){
-    bot.sendMessageWithReplyKeyboard(configItems.userChatIds, "I am Alive!!", "Markdown", formulateKeyboardJson(), true);
+  if ( !configItems.botTTelegram.equals("0123456789")  ) {
+    Serial.println("I am Alive :-) ");
+    //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
+    //botClient.setInsecure();
+    if(bot.getMe()){
+      Serial.println("bot.getMe():TRUE");
+    }else{
+      Serial.println("bot.getMe():FALSE");
+    }
+    //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", strEmpty);
+    bool bSendMessageWithReplyKeyboard=bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive :-) ", "Markdown", formulateKeyboardJson(), true);
+    if(bSendMessageWithReplyKeyboard){
+      Serial.println("bSendMessageWithReplyKeyboard:TRUE");
+    }else{
+      Serial.println("bSendMessageWithReplyKeyboard:FALSE");
+    }
+    if (configItems.alertALL && configItems.userChatIds.toDouble()>0){
+      bot.sendMessageWithReplyKeyboard(configItems.userChatIds,"I am Alive :-) ", "Markdown", formulateKeyboardJson(), true);
+    }
+  }else{
+    Serial.println("Bot Token not yet set, I am not alive yet :-( ");
   }
-  Serial.println("I am Alive!!");
+  
   ///////////////////
 #if defined(FLASH_LAMP_PIN)
   pinMode(FLASH_LAMP_PIN, OUTPUT);
@@ -328,7 +387,7 @@ void setup() {
 //**********************   The LOOP   ****************************//
 //****************************************************************//
 void loop() {
-
+  Serial.println("START LOOP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
   Portal.handleClient();
 #if defined(PIR_PIN)
   int vPIR = digitalRead(PIR_PIN);
@@ -370,17 +429,16 @@ void loop() {
   //////////////////////////////////////////////
   // Computer Vision Motion Detection
   if (configItems.motionDetectVC){
-    // https://github.com/eloquentarduino/EloquentArduino/blob/1.1.8/examples/ESP32CameraNaiveMotionDetection/ESP32CameraNaiveMotionDetection.ino
-    // https://eloquentarduino.github.io/2020/05/easier-faster-pure-video-esp32-cam-motion-detection/?utm_source=old_version
-    Serial.println(setup_camera(FRAMESIZE_QVGA) ? "OK" : "ERR INIT");
-    if (!capture_still()) {
+    // https://github.com/s60sc/ESP32-CAM_Motion/blob/master/ESP32-CAM_Motion.ino
+    camera_fb_t* fb = esp_camera_fb_get();
+    if (!fb) {
         Serial.println("Failed capture");
         delay(3000);
         return;
     }
-    // restore origional camera status
-    applyConfigItem(&configItems);
-    if (motion_detect()) {
+    haveMotion = checkMotion(fb, haveMotion);
+    esp_camera_fb_return(fb); 
+    if (haveMotion) {
         consequentChangedFrames++;
         if (consequentChangedFrames>2) { 
           alertTelegram("CV Motion detected");
@@ -391,10 +449,12 @@ void loop() {
     }else{
       consequentChangedFrames=0;
     }
-    update_frame();
   }
   //////////////////////////////////////////////
   if (millis() > Bot_lasttime + Bot_mtbs)  {
+    Serial.println("bot.getUpdates() !");
+    botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
+    //botClient.setInsecure(true);
     int numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
     while(numNewMessages) {
       Serial.println("got response#1");
@@ -462,6 +522,7 @@ void loop() {
     /////////////////////////////////////////////
     Bot_lasttime = millis();
   }
+  Serial.println("END LOOP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 }
 //****************************************************************//
 

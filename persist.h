@@ -9,6 +9,7 @@
 
 Preferences prefs;
 
+const char strEmpty[]="";
 time_t timeOfLastPhoto=0;
 /*
 look in  resolution_info_t resolution[FRAMESIZE_INVALID]
@@ -121,7 +122,7 @@ struct config_item {
   String timeZone;
   boolean webCaptureOn;
 } configItems {
-  .useFlash = true,
+  .useFlash = false,
   .frameSize = FRAMESIZE_CIF,
   .hMirror = true,
   .vFlip = true,
@@ -137,15 +138,15 @@ struct config_item {
   .sMTPServer = "",
   .userEmail = "",
   .adminEmail = "",
-  .sendEmail = true,
+  .sendEmail = false,
   .motionDetectVC = false,
   .alertALL = false,
-  .saveToSD = true,
+  .saveToSD = false,
   .useDeepSleep = false,
   .useBuzzer = true,
   .screenFlip = true,
   .screenOn=true,
-  .motDetectOn=true,
+  .motDetectOn=false,
   .deviceName = String("TeleView"),
   .botTTelegram = String("0123456789"),
   .adminChatIds = String("0123456789"),
@@ -158,7 +159,7 @@ struct config_item {
 config_item loadConfiguration();
 boolean saveConfiguration(config_item* ci);
 void deleteConfiguration();
-String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",char* sep="|");
+String printConfiguration(config_item* ci,const char* prefixC="",char* suffixC="\n",char* sep="|");
 ////////////////////////////////////////////////////////////////////////////
 void deleteConfiguration(){
   if (!prefs.begin("settings",false)) // False=RW
@@ -354,7 +355,8 @@ boolean saveConfiguration(config_item* ci) {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep) {
+//String printConfiguration(config_item* ci,const char * prefixC,char const * suffixC,const char[] sep) {
+String printConfiguration(config_item* ci,const char* prefixC,char* suffixC,char* sep) {
   String result = "";
   String prefix=String(prefixC);
   String suffix=String(suffixC);

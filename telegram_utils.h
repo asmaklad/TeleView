@@ -1,14 +1,14 @@
 #ifndef TELEGRAM_UTILS_H
 #define TELEGRAM_UTILS_H
 
-#define TELEGRAM_DEBUG 1
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 #include "esp_camera.h"
 #include "persist.h"
 #include "webPages.h"
 #include <ArduinoJson.h>
 #include <ESP_Mail_Client.h>
-
 
 #if defined(SD_CARD_ON)
 #include "FS.h"                // SD Card ESP32

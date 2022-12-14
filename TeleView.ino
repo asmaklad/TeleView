@@ -42,6 +42,7 @@
 #include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
 
+#include <Arduino.h>
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
@@ -98,28 +99,9 @@ bool bTakePhotoTick=false;
 boolean bMotionDetected=false;
 boolean bESPMayGoToSleep=false;
 Ticker tkTimeLapse;
-int consequentChangedFrames=0;
+//int consequentChangedFrames=0;
 
 //motionDetection
-bool debug = true;
-#define THIS_FRAME FRAMESIZE_SVGA // JPEG frames size to be retrieved
-uint8_t fsizePtr = THIS_FRAME; // framesize selection
-uint8_t lightLevel; // Current ambient light level 
-uint8_t nightSwitch = 10; // white level % for night/day switching
-uint8_t motionVal = 7; // motion sensitivity difference setting
-extern const frameStruct frameData[] = {
-  {"QQVGA", 160, 120, 25, 2, 1},
-  {"n/a", 0, 0, 0, 0, 1}, 
-  {"n/a", 0, 0, 0, 0, 1}, 
-  {"HQVGA", 240, 176, 25, 3, 1}, 
-  {"QVGA", 320, 240, 25, 3, 1}, 
-  {"CIF", 400, 296, 25, 3, 1},
-  {"VGA", 640, 480, 15, 3, 2}, 
-  {"SVGA", 800, 600, 10, 3, 2}, 
-  {"XGA", 1024, 768, 5, 3, 3}, 
-  {"SXGA", 1280, 1024, 3, 3, 4}, 
-  {"UXGA", 1600, 1200, 2, 6, 5}  
-};
 bool haveMotion = false;
 // struct tm *startTM; you find it in webPages.h
 
@@ -129,8 +111,13 @@ esp_sleep_wakeup_cause_t print_wakeup_reason();
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
-  Serial.println("START: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+  Serial.println("SETUP START: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
   Serial.println(CAMERA_NAME);
+  psramInit();
+  log_d("Total heap: %d", ESP.getHeapSize());
+  log_d("Free heap: %d", ESP.getFreeHeap());
+  log_d("Total PSRAM: %d", ESP.getPsramSize());
+  log_d("Free PSRAM: %d", ESP.getFreePsram());
 #ifdef CAMERA_MODEL_M5STACK_PSRAM
 // will hold bat output
   bat_init();
@@ -175,36 +162,18 @@ void setup() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  //config.pixel_format = PIXFORMAT_RGB565; // for face detection/recognition
-  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 12;
-  config.fb_count = 1;
-  
-  // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
-  //                      for larger pre-allocated frame buffer.
-  if(config.pixel_format == PIXFORMAT_JPEG){
-    if(psramFound()){
-      config.jpeg_quality = 10;
-      config.fb_count = 2;
-      config.grab_mode = CAMERA_GRAB_LATEST;
-    } else {
-      // Limit the frame size when PSRAM is not available
-      config.frame_size = FRAMESIZE_SVGA;
-      config.fb_location = CAMERA_FB_IN_DRAM;
-    }
-  } else {
-    // Best option for face detection/recognition
-    config.frame_size = FRAMESIZE_240X240;
-#if CONFIG_IDF_TARGET_ESP32S3
+  //init with high specs to pre-allocate larger buffers
+  if(psramFound()){
+    maxRes=MAX_RESOULTION;
+    config.frame_size = FRAMESIZE_UXGA;
+    config.jpeg_quality = 10;  //0-63 lower number means higher quality
     config.fb_count = 2;
-#endif
+  } else {
+    maxRes=FRAMESIZE_SVGA;
+    config.frame_size = FRAMESIZE_SVGA;
+    config.jpeg_quality = 12;  //0-63 lower number means higher quality
+    config.fb_count = 1;
   }
-
-#if defined(CAMERA_MODEL_ESP_EYE)
-  pinMode(13, INPUT_PULLUP);
-  pinMode(14, INPUT_PULLUP);
-#endif
   Serial.print("frame_size: ");
   Serial.println( String(resolutions[config.frame_size][0]+":"+resolutions[config.frame_size][1]) );
   Serial.print("jpeg_quality: ");
@@ -212,7 +181,7 @@ void setup() {
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x\n", err);
+    Serial.printf("Camera init failed with error 0x%x", err);
     delay(1000);
     ESP.restart();
   }
@@ -222,8 +191,9 @@ void setup() {
   keyboardJson=formulateKeyboardJson();
   configItems=loadConfiguration();
   applyConfigItem(&configItems);
-  Serial.println(printConfiguration(&configItems,strEmpty));
-  ////////////////////////////
+  Serial.println(printConfiguration(&configItems,""));
+
+////////////////////////////
 #if defined(I2C_DISPLAY_ADDR)
   display_init();
 #endif
@@ -342,7 +312,7 @@ void setup() {
   #endif
   ///////////////////////////////////
   botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
-  botClient.setInsecure();
+  //botClient.setInsecure();  
   bot.updateToken(configItems.botTTelegram);
   if ( !configItems.botTTelegram.equals("0123456789")  ) {
     Serial.println("I am Alive :-) ");
@@ -353,7 +323,7 @@ void setup() {
     }else{
       Serial.println("bot.getMe():FALSE");
     }
-    //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", strEmpty);
+    //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
     bool bSendMessageWithReplyKeyboard=bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive :-) ", "Markdown", formulateKeyboardJson(), true);
     if(bSendMessageWithReplyKeyboard){
       Serial.println("bSendMessageWithReplyKeyboard:TRUE");
@@ -382,13 +352,15 @@ void setup() {
   pinMode(BUZZER_PIN,OUTPUT);
 #endif
   bTelegramBotInitiated=true;
+Serial.println("SETUP END: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 }
 //****************************************************************//
 //**********************   The LOOP   ****************************//
 //****************************************************************//
 void loop() {
-  Serial.println("START LOOP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+  log_d("START LOOP *****************************************************");
   Portal.handleClient();
+
 #if defined(PIR_PIN)
   int vPIR = digitalRead(PIR_PIN);
   /*
@@ -420,41 +392,28 @@ void loop() {
   line2="                    ";
   line3=WiFi.localIP().toString();
   if (displayEnabled){
+    Serial.println("displayEnabled:TRUE");
     display_Textlines( line1, line2 , line3 );
   }else{
+    Serial.println("displayEnabled:FALSE");
     display.clearDisplay();
     display.display();
   }
 #endif
   //////////////////////////////////////////////
   // Computer Vision Motion Detection
-  if (configItems.motionDetectVC){
-    // https://github.com/s60sc/ESP32-CAM_Motion/blob/master/ESP32-CAM_Motion.ino
-    camera_fb_t* fb = esp_camera_fb_get();
-    if (!fb) {
-        Serial.println("Failed capture");
-        delay(3000);
-        return;
-    }
-    haveMotion = checkMotion(fb, haveMotion);
-    esp_camera_fb_return(fb); 
+  if (configItems.motionDetectVC ){
+    ESP_LOGD ("MAIN","CheckMotion before.");
+    haveMotion = checkMotion(haveMotion , (&configItems)->frameSize ,haveMotion );
+    ESP_LOGD ("MAIN","CheckMotion After.");
     if (haveMotion) {
-        consequentChangedFrames++;
-        if (consequentChangedFrames>2) { 
-          alertTelegram("CV Motion detected");
-          bMotionDetected=true;
-          consequentChangedFrames=0;
-        }
-        delay(100);
-    }else{
-      consequentChangedFrames=0;
+      alertTelegram("CV Motion detected");
     }
   }
   //////////////////////////////////////////////
   if (millis() > Bot_lasttime + Bot_mtbs)  {
     Serial.println("bot.getUpdates() !");
-    botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
-    //botClient.setInsecure(true);
+    
     int numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
     while(numNewMessages) {
       Serial.println("got response#1");
@@ -522,7 +481,7 @@ void loop() {
     /////////////////////////////////////////////
     Bot_lasttime = millis();
   }
-  Serial.println("END LOOP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+  log_d("END LOOP *****************************************************");
 }
 //****************************************************************//
 
@@ -673,7 +632,7 @@ void applyConfigItem (config_item* ci) {
     // s->set_contrast(s, 0); // (-2 to 2)
     // s->set_sharpness(s, 0); // (-2 to 2)
     // s->set_colorbar(s, 0); // (0 or 1) - testcard
-    // s->set_special_effect(s, 0);
+    // s->set_special_effect(s, 2); // 0 – No Effect,1 – Negative,2 – Grayscale,3 – Red Tint,4 – Green Tint,5 – Blue Tint,6 – Sepia
     // s->set_ae_level(s, 0); // auto exposure levels (-2 to 2)
     // s->set_bpc(s, 0); // black pixel correction
     // s->set_wpc(s, 0); // white pixel correction

@@ -84,14 +84,35 @@ String onCapture(AutoConnectAux& aux, PageArgument& args) {
 }
 ///////////////////////////////////////////////////////////
 String onPage(AutoConnectAux& aux, PageArgument& args) {
-  Serial.print("onPage:Portal.where()");
+  Serial.print("onPage:Portal.where():");
   Serial.println(Portal.where());
-  Serial.print("onPage:args.size()");
+  Serial.print("onPage:args.size():");
   Serial.println(args.size());
   String result="Success";
   for (int i=0;i<args.args();i++){
     Serial.printf( "*> %s:%s\n", args.argName(i).c_str(), String(args.arg(i)).c_str() );
   }
+  /*
+  AutoConnectElementVT& elements = aux.getElements();
+  for (AutoConnectElement& elm : elements) {
+    if (elm.typeOf() == AC_Text) {
+      AutoConnectText& element = reinterpret_cast<AutoConnectText&>(elm);
+      Serial.printf( "*> %s:%s:%s\n", element.name, element.name, element.value );
+    }
+    if (elm.typeOf() == AC_Input) {
+      AutoConnectInput& element = reinterpret_cast<AutoConnectInput&>(elm);
+      Serial.printf( "*> %s:%s:%s\n", element.name, element.label, element.value );
+    }
+    if (elm.typeOf() == AC_Select) {
+      AutoConnectSelect& element = reinterpret_cast<AutoConnectSelect&>(elm);
+      Serial.printf( "*> %s:%s:%s\n", element.name, element.label, element.selected );
+    }
+    if (elm.typeOf() == AC_Checkbox) {
+      AutoConnectCheckbox& element = reinterpret_cast<AutoConnectCheckbox&>(elm);
+      Serial.printf( "*> %s:%s:%d\n", element.name, element.label, element.checked );
+    }
+  } 
+  */ 
 #ifndef  I2C_DISPLAY_ADDR
     aux["XscreenOn"].as<AutoConnectCheckbox>().enable=false;
     aux["XscreenFlip"].as<AutoConnectCheckbox>().enable=false;
@@ -109,15 +130,12 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     aux["XuseBuzzer"].as<AutoConnectCheckbox>().enable=false;
 #endif
 
-// not yet implemented:
-aux["Xset_whitebal"].as<AutoConnectCheckbox>().enable=false;
-//aux["Xset_saturation"].as<AutoConnectCheckbox>().enable=false;
-//aux["Xset_contrast"].as<AutoConnectCheckbox>().enable=false;
-//aux["Xset_brightness"].as<AutoConnectCheckbox>().enable=false;
-if (!psramFound()){
-    //TBD
-    //aux["XFaceDetect"].as<AutoConnectCheckbox>().enable=false;
-}
+  // not yet implemented:
+  aux["Xset_whitebal"].as<AutoConnectCheckbox>().enable=false;
+  //aux["Xset_saturation"].as<AutoConnectCheckbox>().enable=false;
+  //aux["Xset_contrast"].as<AutoConnectCheckbox>().enable=false;
+  //aux["Xset_brightness"].as<AutoConnectCheckbox>().enable=false;
+
   // the source page is also /teleview and has some args with it, then we need to save it.
   if (Portal.where().equals("/teleView") && args.size()>0 ){
     result="Save Error";
@@ -137,36 +155,40 @@ if (!psramFound()){
       unsigned int matched=matchResolutionText(framsizeText);
       configItems.frameSize=(framesize_t) (matched) ;
     }
+    
     configItems.timeZone=(args.hasArg("Xtimezone")?args.arg("Xtimezone"):"Europe/Berlin");
-    configItems.hMirror=(args.hasArg("XhMirror")?true:false);
-    configItems.useFlash=(args.hasArg("XuseFlash")?true:false);
-    configItems.vFlip=(args.hasArg("XvFlip")?true:false);
-
+    
     configItems.set_whitebal=(args.hasArg("Xset_whitebal")?args.arg("Xset_whitebal").toInt():0);
     configItems.set_saturation=(args.hasArg("Xset_saturation")?args.arg("Xset_saturation").toInt():0);
     configItems.set_contrast=(args.hasArg("Xset_contrast")?args.arg("Xset_contrast").toInt():0);
     configItems.set_brightness=(args.hasArg("Xset_brightness")?args.arg("Xset_brightness").toInt():0);
     configItems.jpegQuality=(args.hasArg("XjpegQuality")?args.arg("XjpegQuality").toInt():0);
-
-    configItems.sMTPTLS=(args.hasArg("XsMTPTLS")?true:false);
     configItems.sMTPPort=(args.hasArg("XsMTPPort")?args.arg("XsMTPPort").toInt():0);
     configItems.sMTPPassword=(args.hasArg("XsMTPPassword")?args.arg("XsMTPPassword"):"");
     configItems.sMTPUsername=(args.hasArg("XsMTPUsername")?args.arg("XsMTPUsername"):"");
     configItems.sMTPServer=(args.hasArg("XsMTPServer")?args.arg("XsMTPServer"):"");
     configItems.userEmail=(args.hasArg("XuserEmail")?args.arg("XuserEmail"):"");
     configItems.adminEmail=(args.hasArg("XadminEmail")?args.arg("XadminEmail"):"");
-    configItems.sendEmail=(args.hasArg("XsendEmail")?true:false);
-
-    configItems.motionDetectVC=(args.hasArg("XmotionDetectVC")?true:false);
-    configItems.alertALL=(args.hasArg("XalertALL")?true:false);
-    configItems.saveToSD=(args.hasArg("XsaveToSD")?true:false);
-    configItems.useDeepSleep=(args.hasArg("XuseDeepSleep")?true:false);
-    configItems.useBuzzer=(args.hasArg("XuseBuzzer")?true:false);
-    configItems.screenFlip=(args.hasArg("XscreenFlip")?true:false);
-    configItems.screenOn=(args.hasArg("XscreenOn")?true:false);
-    configItems.motDetectOn=(args.hasArg("XmotDetectOn")?true:false);
-    applyConfigItem(&configItems);
-    saveConfiguration(&configItems);
+    
+    configItems.hMirror       =aux["XhMirror"].as<AutoConnectCheckbox>().checked;
+    configItems.useFlash      =aux["XuseFlash"].as<AutoConnectCheckbox>().checked;
+    configItems.vFlip         =aux["XvFlip"].as<AutoConnectCheckbox>().checked;
+    configItems.sMTPTLS       =aux["XsMTPTLS"].as<AutoConnectCheckbox>().checked;
+    configItems.sendEmail     =aux["XsendEmail"].as<AutoConnectCheckbox>().checked;
+    configItems.motionDetectVC=aux["XmotionDetectVC"].as<AutoConnectCheckbox>().checked;
+    configItems.alertALL      =aux["XalertALL"].as<AutoConnectCheckbox>().checked;
+    configItems.saveToSD      =aux["XsaveToSD"].as<AutoConnectCheckbox>().checked;
+    configItems.useDeepSleep  =aux["XuseDeepSleep"].as<AutoConnectCheckbox>().checked;
+    configItems.useBuzzer     =aux["XuseBuzzer"].as<AutoConnectCheckbox>().checked;
+    configItems.motDetectOn   =aux["XmotDetectOn"].as<AutoConnectCheckbox>().checked;    
+    configItems.screenFlip    =aux["XscreenFlip"].as<AutoConnectCheckbox>().checked;
+    configItems.screenOn      =aux["XscreenOn"].as<AutoConnectCheckbox>().checked;
+        
+    ///////////////////////////////////////////////
+    Serial.println("saveConfiguration(&configItems);");
+    boolean bDirty=saveConfiguration(&configItems);
+    Serial.println("applyConfigItem(&configItems);");
+    applyConfigItem(&configItems);  
     result="Saved";
   }else if (args.size()==0) { 
     // no arguments wehere provided, then we need to load
@@ -215,7 +237,7 @@ if (!psramFound()){
   }
   aux["XResult"].value=result;
   return String("");
-}
+  }
 ///////////////////////////////////////////////////////////
 static const char AUX_CONFIGPAGE[] PROGMEM = R"(
 {
@@ -623,5 +645,3 @@ typedef enum {
 
 
 #endif //WEBPAGES
-
-  

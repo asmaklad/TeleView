@@ -1,14 +1,15 @@
 #ifndef TELEGRAM_UTILS_H
 #define TELEGRAM_UTILS_H
 
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
+#define TELEGRAM_DEBUG 1
+
 #include <UniversalTelegramBot.h>
 #include "esp_camera.h"
 #include "persist.h"
 #include "webPages.h"
 #include <ArduinoJson.h>
 #include <ESP_Mail_Client.h>
+
 
 #if defined(SD_CARD_ON)
 #include "FS.h"                // SD Card ESP32
@@ -316,11 +317,8 @@ void handleNewMessages(int numNewMessages) {
         //////////////////////
         Serial.println("saveConfiguration(configItems);");
         boolean bDirty=saveConfiguration(&configItems);
-        if (bDirty){
-          Serial.println("applyConfigItem(&configItems);");
-          applyConfigItem(&configItems);
-        }
-
+        Serial.println("applyConfigItem(&configItems)#1");
+        applyConfigItem(&configItems);
       } else {
         String text = bot.messages[i].text;
         String from_name = bot.messages[i].from_name;
@@ -407,10 +405,8 @@ void handleNewMessages(int numNewMessages) {
       ///////////////////////////////////
       Serial.println("saveConfiguration(configItems);");
       boolean bDirty=saveConfiguration(&configItems);
-      if (bDirty){
-        Serial.println("applyConfigItem(&configItems);");
-        applyConfigItem(&configItems);
-      }
+      Serial.println("applyConfigItem(&configItems)#2");
+      applyConfigItem(&configItems);
       if(bPrintOptions){
         Serial.println("printConfiguration(&configItems);");
         Serial.println(printConfiguration(&configItems,"","\n","|"));

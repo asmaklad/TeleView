@@ -21,6 +21,94 @@ time_t currentTimeMills ;
 time_t timeB;
 struct tm  *tmNowTM , *tmDiffTM;
 
+////////////////////////////////////////////////////////////////////////////////
+// for the streaming server
+#define PART_BOUNDARY "ef2ac69f9149220e889abc22b81d1401"
+
+// TODO: move that procedure into a new "SERVER" not the Portal's Autoconnect server
+// 
+static void stream_handler(){
+  if (!configItems.webCaptureOn){
+    return;    
+  }
+  camera_fb_t * fb = NULL;
+  esp_err_t res = ESP_OK;
+  unsigned int frameDelay= (int) 1000/12; // 12 frames per second
+  unsigned long time_last_frame_millis = 0;
+  WiFiClient client = Server.client();
+  client.flush();
+  if (!client) {
+    res = ESP_FAIL;
+    ESP_LOGE(TAG_WEB,"WifiClient not found!");
+    return;
+  }    
+  client.println("HTTP/1.0 200 OK" );
+  client.println("Connection: keep-alive");
+  client.println("Content-Type: multipart/x-mixed-replace;boundary=" PART_BOUNDARY);
+  client.println();
+  client.println( "--" PART_BOUNDARY);
+  sensor_t * s = esp_camera_sensor_get();
+  s->set_pixformat(s, PIXFORMAT_JPEG );
+  //while(true){
+  for (int i=0;i<100;i++) {
+    if (millis()-time_last_frame_millis < frameDelay ){
+      delay(100);
+      continue;
+    }
+    time_last_frame_millis=millis();
+    fb = esp_camera_fb_get();
+    if (!fb) {
+      ESP_LOGE(TAG_WEB,"Camera capture failed");
+      res = ESP_FAIL;
+      return;
+    }
+    // send a frame (1 JPEG anf follow it by the boundry string)
+    client.println( "Content-Type: image/jpeg" );
+    //client.println( "" );
+    client.printf ( "Content-Length: %u",fb->len );
+    client.println("");
+    client.println("");
+    uint8_t *fbBuf = fb->buf;
+    size_t fbLen = fb->len;
+    size_t sentB =0;
+    Serial.print(">");
+    for (size_t n=0;n<fbLen;n=n+1024) {
+      if (n+1024<fbLen) {
+        Serial.print("_");
+        client.write(fbBuf, 1024);
+        fbBuf += 1024;
+        sentB += 1024;
+      } else if (fbLen%1024>0) {
+        Serial.print("+");
+        size_t remainder = fbLen%1024;
+        client.write(fbBuf, remainder);
+        sentB += remainder;
+      }
+      if(client.connected()){
+        Serial.print("*");
+      }else{
+        Serial.print("X");
+        client.stop();
+        return;
+      }
+    } // end Buffer loop
+    client.flush();
+    client.println("");
+    client.println("");
+    client.println( "--" PART_BOUNDARY);
+    Serial.println("<");
+    Serial.printf("MJPG: %uB\n",(uint32_t)(fb->len));
+    if(fb){
+      esp_camera_fb_return(fb);
+      fb = NULL;
+    }
+    // Yield ?!
+  } // end Endless loop
+  
+  if(res != ESP_OK)
+    return;
+  client.flush();   
+}
 ///////////////////////////////////////////////////////////
 void printLocalTime();
 ///////////////////////////////////////////////////////////
@@ -69,13 +157,13 @@ bool captivePortalStarted(IPAddress ip){
 ///////////////////////////////////////////////////////////
 String onCapture(AutoConnectAux& aux, PageArgument& args) {
   ESP_LOGV(TAG_WEB,"onCapture:Portal.where(): %s", Portal.where());
-  ESP_LOGV(TAG_WEB,"onCapture:args.size() %s",args.size());
+  ESP_LOGV(TAG_WEB,"onCapture:args.size() %d",args.size());
   return String("");
 }
 ///////////////////////////////////////////////////////////
 String onPage(AutoConnectAux& aux, PageArgument& args) {
   ESP_LOGV(TAG_WEB,"onPage:Portal.where(): %s",Portal.where());
-  ESP_LOGV(TAG_WEB,"onPage:args.size(): %s",args.size());
+  ESP_LOGV(TAG_WEB,"onPage:args.size(): %d",args.size());
   String result="Success";
   for (int i=0;i<args.args();i++){
     ESP_LOGV(TAG_WEB, "*> %s:%s", args.argName(i).c_str(), String(args.arg(i)).c_str() );
@@ -713,7 +801,6 @@ void capture2Page() {
 
   Server.send(200,"text/html",content);
 }
-*/
 ////////////////////////////////////////////////////////////////////////////
 void printLocalTime()
 {
@@ -740,7 +827,7 @@ void capturePage(){
     WiFiClient client = Server.client();
     if (!client) {
       return;
-    }
+    }    
     client.flush();
     fb = esp_camera_fb_get();
     if (!fb) {

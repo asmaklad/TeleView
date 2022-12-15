@@ -209,8 +209,11 @@ void setup() {
   Portal.host().on("/",rootPage);
   Portal.host().on("/delete",deletePage);
   Portal.host().on("/capture",capturePage);
-  Portal.host().on("/capture2",capture2Page)
   Portal.host().on("/capture.jpg",capturePageJpeg);
+  //Portal.host().on("/stream",stream_handler);
+  //Portal.host().on();
+  Portal.append("/capture2","Capture2",capture2Page);
+  Portal.append("/stream","Stream",stream_handler);
   //
   auxPageConfig.load(AUX_CONFIGPAGE);
   populateResolutionsSelects(auxPageConfig);

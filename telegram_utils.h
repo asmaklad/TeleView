@@ -637,27 +637,26 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   uint8_t *fbBuf = fb->buf;
   size_t fbLen = fb->len;
   size_t sentB =0;
-  ESP_LOGV(TAG_TELE,"");
-  ESP_LOGV(TAG_TELE,"/");
+  Serial.print("/");
   for (size_t n=0;n<fbLen;n=n+1024) {
     if (n+1024<fbLen) {
-      ESP_LOGV(TAG_TELE,"_");
+      Serial.print("_");
       botClient.write(fbBuf, 1024);
       fbBuf += 1024;
       sentB += 1024;
     }
     else if (fbLen%1024>0) {
-      ESP_LOGV(TAG_TELE,"+");
+      Serial.print("+");
       size_t remainder = fbLen%1024;
       botClient.write(fbBuf, remainder);
       sentB += remainder;
     }
     if(botClient.connected())
-      ESP_LOGV(TAG_TELE,"*");
+      Serial.print("*");
     else
-      ESP_LOGV(TAG_TELE,"X");
+      Serial.print("X");
   }
-  ESP_LOGV(TAG_TELE,"/");
+  Serial.println("/");
   botClient.print(tail);
 
   ESP_LOGV(TAG_TELE, "sendCapturedImage2Telegram2:sentB:%d , w%d X h%d",

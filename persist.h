@@ -7,6 +7,10 @@
 #include <Preferences.h>
 #include <Arduino.h>  // for type definitions
 
+
+static const char* TAG_PS = "PERSIST";
+#include "esp_log.h"
+
 Preferences prefs;
 
 time_t timeOfLastPhoto=0;
@@ -73,21 +77,22 @@ static const Timezone_t TZ[] = {
 ////////////////////////////////////////////////////////////////////////////
 int matchResolutionText(String text){
   int result=-1;
-  Serial.println("TESTX:"+text);
+  ESP_LOGV(TAG_PS,"TESTX:%s",text);
   for (int i=0;i<=maxRes;i++){
-    Serial.println("compareTo:/"+String(resolutions[i][0]));
+    ESP_LOGV( TAG_PS,"compareTo:/%s",resolutions[i][0] );
     if ((text.compareTo(String("/"+resolutions[i][0])))==0){
       result=i;
       break;
     }
   }
   if (result==-1){
-    Serial.println("matchResolutionText:No Match Found!");
+    ESP_LOGV(TAG_PS,"matchResolutionText:No Match Found!");
   }
   return( result);
 }
 ////////////////////////////////////////////////////////////////////////////
 struct config_item {
+  // [:ADD BOOLEAN HERE:]#1
   boolean useFlash;
   boolean hMirror;
   boolean vFlip;
@@ -102,6 +107,9 @@ struct config_item {
   boolean motDetectOn;
   boolean sMTPTLS;
   boolean webCaptureOn;
+  // [:ADD INT HERE:]#1
+  int cvIntervalSec;
+  int cvChangePercent;
   int set_whitebal;
   int set_saturation;
   int set_contrast;
@@ -110,6 +118,7 @@ struct config_item {
   int sMTPPort;
   int lapseTime;
   framesize_t frameSize;
+  // [:ADD STRING HERE:]#1
   String sMTPPassword;
   String sMTPUsername;
   String sMTPServer;
@@ -121,10 +130,11 @@ struct config_item {
   String userChatIds;
   String timeZone;
 } configItems {
+  // [:ADD BOOLEAN HERE:]#2
   .useFlash = true,
   .hMirror = true, 
   .vFlip = true,
-  .sendEmail = true,
+  .sendEmail = false,
   .motionDetectVC = false,
   .alertALL = false,
   .saveToSD = true,
@@ -132,9 +142,12 @@ struct config_item {
   .useBuzzer = true,
   .screenFlip = true,
   .screenOn=true,
-  .motDetectOn=true,
-  .sMTPTLS = true,
+  .motDetectOn=false,
+  .sMTPTLS = false,
   .webCaptureOn=true,
+  // [:ADD INT HERE:]#2
+  .cvIntervalSec = 500,
+  .cvChangePercent = 10,
   .set_whitebal = 1,
   .set_saturation = 0,
   .set_contrast = 0,
@@ -143,44 +156,12 @@ struct config_item {
   .sMTPPort = 0,
   .lapseTime=60,  
   .frameSize = FRAMESIZE_CIF,
+  // [:ADD STRING HERE:]#2
   .sMTPPassword = "",
   .sMTPUsername = "",
   .sMTPServer = "",
   .userEmail = "",
   .adminEmail = "",  
-  .deviceName = String("TeleView"),
-  .botTTelegram = String("0123456789"),
-  .adminChatIds = String("0123456789"),
-  .userChatIds  = String("0123456789"),
-  .timeZone="Europe/Berlin"  
-} , configItemsAllTure {
-  .useFlash = true,
-  .hMirror = true, 
-  .vFlip = true,
-  .sendEmail = true,
-  .motionDetectVC = true,
-  .alertALL = true,
-  .saveToSD = true,
-  .useDeepSleep = true,
-  .useBuzzer = true,
-  .screenFlip = true,
-  .screenOn=true,
-  .motDetectOn=true,
-  .sMTPTLS = true,
-  .webCaptureOn=true,
-  .set_whitebal = 1,
-  .set_saturation = 1,
-  .set_contrast = 1,
-  .set_brightness = 1,
-  .jpegQuality = 12,
-  .sMTPPort = 1,
-  .lapseTime=60,  
-  .frameSize = FRAMESIZE_CIF,
-  .sMTPPassword = " ",
-  .sMTPUsername = " ",
-  .sMTPServer = " ",
-  .userEmail = " ",
-  .adminEmail = " ",  
   .deviceName = String("TeleView"),
   .botTTelegram = String("0123456789"),
   .adminChatIds = String("0123456789"),
@@ -197,11 +178,11 @@ String printConfiguration(config_item* ci,char* prefixC="",char* suffixC="\n",ch
 void deleteConfiguration(){
   if (!prefs.begin("settings",false)) // False=RW
   {
-    Serial.println("failed find settings prefrences! returning default."); 
+    ESP_LOGV(TAG_PS,"failed find settings prefrences! returning default."); 
     prefs.end();
     return ;
   }else{
-    Serial.println("Deleting all settings");
+    ESP_LOGV(TAG_PS,"Deleting all settings");
     prefs.clear();
     prefs.end();
   }
@@ -211,15 +192,14 @@ config_item loadConfiguration() {
   config_item ci ;
   if (!prefs.begin("settings",true))
   {
-    // Write AllTrue
-    saveConfiguration (&configItemsAllTure);
     // Write Default
     saveConfiguration (&configItems);    
-    Serial.println("failed find settings prefrences! returning default.");
+    ESP_LOGV(TAG_PS,"failed find settings prefrences! returning default.");
     prefs.end();
     return(configItems);
   }else{
-    Serial.println("found settings prefrences.");
+    ESP_LOGV(TAG_PS,"found settings prefrences.");
+    // [:ADD BOOLEAN HERE:]#4
     ci.useFlash = prefs.getBool("useFlash",configItems.useFlash);
     ci.hMirror = prefs.getBool("hMirror",configItems.hMirror);
     ci.vFlip = prefs.getBool("vFlip",configItems.vFlip);
@@ -235,6 +215,9 @@ config_item loadConfiguration() {
     ci.screenOn = prefs.getBool("screenOn",configItems.screenOn);
     ci.motDetectOn = prefs.getBool("motDetectOn",configItems.motDetectOn);
     ci.webCaptureOn=prefs.getBool("webCaptureOn",configItems.webCaptureOn);
+    // [:ADD INT HERE:]#4
+    ci.cvIntervalSec = prefs.getInt("cvIntervalSec",configItems.cvIntervalSec);
+    ci.cvChangePercent = prefs.getInt("cvChangePercent",configItems.cvChangePercent);
     ci.sMTPPort = prefs.getInt("sMTPPort",configItems.sMTPPort);
     ci.set_whitebal = prefs.getInt("set_whitebal",configItems.set_whitebal);
     ci.set_saturation = prefs.getInt("set_saturation",configItems.set_saturation);
@@ -243,6 +226,7 @@ config_item loadConfiguration() {
     ci.jpegQuality = prefs.getInt("jpegQuality",configItems.jpegQuality);
     ci.lapseTime=prefs.getInt("lapseTime",configItems.lapseTime);
     ci.frameSize = (framesize_t) prefs.getUInt("frameSize",configItems.frameSize);    
+    // [:ADD STRING HERE:]#5
     ci.sMTPPassword = prefs.getString("sMTPPassword",configItems.sMTPPassword);
     ci.sMTPUsername = prefs.getString("sMTPUsername",configItems.sMTPUsername);
     ci.sMTPServer = prefs.getString("sMTPServer",configItems.sMTPServer);
@@ -260,13 +244,14 @@ config_item loadConfiguration() {
 }
 ////////////////////////////////////////////////////////////////////////////
 boolean saveConfiguration(config_item* ci) {
-  Serial.println("saveConfiguration:EEPROM Write:start");
+  ESP_LOGV(TAG_PS,"saveConfiguration:EEPROM Write:start");
   boolean bDirty=false;
   if (!prefs.begin("settings",false)){  //false=RW , true=RO
-    Serial.println("ERROR: failed to load settings for RW."); 
+    ESP_LOGV(TAG_PS,"ERROR: failed to load settings for RW."); 
     prefs.end();
     return (false);
   }else{
+    // [:ADD BOOLEAN HERE:]#5
     prefs.putBool("useFlash",ci->useFlash);
     prefs.putBool("hMirror",ci->hMirror);
     prefs.putBool("vFlip",ci->vFlip);
@@ -281,7 +266,9 @@ boolean saveConfiguration(config_item* ci) {
     prefs.putBool("motDetectOn",ci->motDetectOn);
     prefs.putBool("webCaptureOn",ci->webCaptureOn);
     prefs.putBool("sMTPTLS",ci->sMTPTLS);
-
+    // [:ADD INT HERE:]#5
+    prefs.putInt("cvIntervalSec",ci->cvIntervalSec);
+    prefs.putInt("cvChangePercent",ci->cvChangePercent);
     prefs.putInt("set_whitebal",ci->set_whitebal);
     prefs.putInt("set_saturation",ci->set_saturation); 
     prefs.putInt("set_contrast",ci->set_contrast);
@@ -290,7 +277,7 @@ boolean saveConfiguration(config_item* ci) {
     prefs.putInt("sMTPPort",ci->sMTPPort);
     prefs.putInt("lapseTime",ci->lapseTime);
     prefs.putUInt("frameSize", (unsigned int) (ci->frameSize) ); 
-
+    // [:ADD STRING HERE:]#5
     prefs.putString("sMTPPassword",ci->sMTPPassword); 
     prefs.putString("sMTPUsername",ci->sMTPUsername); 
     prefs.putString("sMTPServer",ci->sMTPServer);
@@ -300,11 +287,11 @@ boolean saveConfiguration(config_item* ci) {
     prefs.putString("botTTelegram",ci->botTTelegram);
     prefs.putString("adminChatIds",ci->adminChatIds);
     prefs.putString("userChatIds",ci->userChatIds);
-    prefs.putString("timeZone",ci->timeZone); bDirty=true;
+    prefs.putString("timeZone",ci->timeZone);
     prefs.end();
   }
   prefs.end();
-  Serial.println("saveConfiguration:EEPROM Write:End");
+  ESP_LOGV(TAG_PS,"saveConfiguration:EEPROM Write:End");
   return(bDirty);
 }
 
@@ -414,10 +401,16 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"adminEmail       "+sep+"";
   result += String(ci->adminEmail)  + suffix;
   result += prefix+"sendEmail        "+sep+"";
-  
+  // [:ADD BOOLEAN HERE:]#6
+  // [:ADD INT HERE:]#6
+  // [:ADD STRING HERE:]#6
   result += (ci->sendEmail ? String("true") : String("false"))  + suffix;
   result += prefix+"motionDetectCV   "+sep+"";
   result += (ci->motionDetectVC ? String("true") : String("false"))  + suffix;
+  result += prefix+"cvIntervalSec    "+sep+"";
+  result += String(ci->cvIntervalSec)  +" ms"+ suffix;
+  result += prefix+"cvChangePercent  "+sep+"";
+  result += String(ci->cvChangePercent)  +" %"+ suffix;
   result += prefix+"alertALL         "+sep+"";
   result += (ci->alertALL ? String("true") : String("false"))  + suffix;
   result += prefix+"useDeepSleep     "+sep+"";
@@ -425,10 +418,11 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+"webCaptureOn     "+sep+"";
   result += (ci->webCaptureOn ? String("true") : String("false")) + suffix;
   result += prefix+"frameSize        "+sep+"";
-  Serial.println("printConfiguration#10");
+  
+  ESP_LOGV(TAG_PS,"printConfiguration#10");
   result += String((unsigned int) ci->frameSize) + ",";
-  Serial.print ("printConfiguration:ci->frameSize:");
-  Serial.println (ci->frameSize);
+  ESP_LOGV(TAG_PS,"printConfiguration:ci->frameSize: %d", ci->frameSize);
+
   ci->frameSize = (ci->frameSize<0? (framesize_t) 0:ci->frameSize);
   result += resolutions[((unsigned int) ci->frameSize)][0] + ",";
   result += resolutions[((int) ci->frameSize)][1] +suffix;
@@ -442,7 +436,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += String(ci->lapseTime)+suffix;
   result += prefix+"timeZone         "+sep+"";
   result += ci->timeZone+suffix;
-  Serial.println("printConfiguration#11");
+  ESP_LOGV(TAG_PS,"printConfiguration#11");
   /*
   struct tm *tm;
   time_t  t;
@@ -460,7 +454,7 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
     result += "UNKNOWN" +suffix;
   }
   result += "</pre>";
-  Serial.println("printConfiguration#12");
+  ESP_LOGV(TAG_PS,"printConfiguration#12");
   return (result);
 }
 ////////////////////////////////////////////////////////////////////////////

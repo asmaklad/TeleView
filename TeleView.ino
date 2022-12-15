@@ -43,6 +43,8 @@
 #include "esp_camera.h"
 
 #include <Arduino.h>
+static const char* TAG_MAIN = "MAIN";
+#include "esp_log.h"
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
@@ -71,6 +73,7 @@ int PICTURES_COUNT=0;
 //////////////////////////////////////
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include "esp_log.h"
+static const char* TAG01 = "SETUP";
 
 //////////////////////////////////////
 #include "persist.h"
@@ -111,13 +114,13 @@ esp_sleep_wakeup_cause_t print_wakeup_reason();
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disbale the burnout reset
   Serial.begin(115200);
-  Serial.println("SETUP START: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-  Serial.println(CAMERA_NAME);
+  ESP_LOGV(TAG_MAIN,"SETUP START: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+  ESP_LOGV(TAG_MAIN,CAMERA_NAME);
   psramInit();
-  log_d("Total heap: %d", ESP.getHeapSize());
-  log_d("Free heap: %d", ESP.getFreeHeap());
-  log_d("Total PSRAM: %d", ESP.getPsramSize());
-  log_d("Free PSRAM: %d", ESP.getFreePsram());
+  ESP_LOGV(TAG_MAIN,"Total heap: %d", ESP.getHeapSize());
+  ESP_LOGV(TAG_MAIN,"Free heap: %d", ESP.getFreeHeap());
+  ESP_LOGV(TAG_MAIN,"Total PSRAM: %d", ESP.getPsramSize());
+  ESP_LOGV(TAG_MAIN,"Free PSRAM: %d", ESP.getFreePsram());
 #ifdef CAMERA_MODEL_M5STACK_PSRAM
 // will hold bat output
   bat_init();
@@ -130,13 +133,11 @@ void setup() {
   //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
   //esp_log_level_set("wifi", ESP_LOG_WARN);      // enable WARN logs from WiFi stack
   //esp_log_level_set("dhcpc", ESP_LOG_INFO);     // enable INFO logs from DHCP client
-  Serial.print("Compile Date:");
-  Serial.println(compileDate);
-  Serial.print("Compile Time:");
-  Serial.println(compileTime);
-  Serial.print("Compile Compiler:");
-  Serial.println(compileCompiler);
-  Serial.println();
+
+  ESP_LOGV(TAG_MAIN,"Compile Date:%s",compileDate);
+  ESP_LOGV(TAG_MAIN,"Compile Time:%s",compileTime);
+  ESP_LOGV(TAG_MAIN,"Compile Compiler:",compileCompiler);
+
   //Print the wakeup reason for ESP32
   print_wakeup_reason();
   //
@@ -174,14 +175,15 @@ void setup() {
     config.jpeg_quality = 12;  //0-63 lower number means higher quality
     config.fb_count = 1;
   }
-  Serial.print("frame_size: ");
-  Serial.println( String(resolutions[config.frame_size][0]+":"+resolutions[config.frame_size][1]) );
-  Serial.print("jpeg_quality: ");
-  Serial.println(config.jpeg_quality);
+  ESP_LOGV(TAG_MAIN,"frame_size: %s:%s",
+    resolutions[config.frame_size][0],
+    resolutions[config.frame_size][1] 
+  );
+  ESP_LOGV(TAG_MAIN,"jpeg_quality: %d",config.jpeg_quality);
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
+    ESP_LOGE(TAG_MAIN,"Camera init failed with error 0x%x", err);
     delay(1000);
     ESP.restart();
   }
@@ -191,7 +193,7 @@ void setup() {
   keyboardJson=formulateKeyboardJson();
   configItems=loadConfiguration();
   applyConfigItem(&configItems);
-  Serial.println(printConfiguration(&configItems,""));
+  ESP_LOGV(TAG_MAIN,"%s",printConfiguration(&configItems,""));
 
 ////////////////////////////
 #if defined(I2C_DISPLAY_ADDR)
@@ -203,9 +205,11 @@ void setup() {
   setupFSBrowser();
 #endif
 */
+  ESP_LOGV("SETUP","Configuring the Web Pages!");
   Portal.host().on("/",rootPage);
   Portal.host().on("/delete",deletePage);
   Portal.host().on("/capture",capturePage);
+  Portal.host().on("/capture2",capture2Page)
   Portal.host().on("/capture.jpg",capturePageJpeg);
   //
   auxPageConfig.load(AUX_CONFIGPAGE);
@@ -241,10 +245,10 @@ void setup() {
   
   /////////////////////////////
   if (Portal.begin()) {
-    Serial.println("WiFi connected: " + WiFi.localIP().toString());
+    ESP_LOGV(TAG_MAIN,"WiFi connected: %s " , WiFi.localIP().toString().c_str() );
     //MDNS
     if (!MDNS.begin(configItems.deviceName.c_str())) {
-        Serial.println("Error setting up MDNS responder!");
+        ESP_LOGE(TAG_MAIN,"Error setting up MDNS responder!");
         while(1) {
             delay(1000);
         }
@@ -253,34 +257,26 @@ void setup() {
     // With applying AutoConnect, the MDNS service must be started after
     // establishing a WiFi connection.  
     MDNS.addService("http", "tcp", 80);
-    Serial.println("mDNS responder started");
+    ESP_LOGV(TAG_MAIN,"mDNS responder started");
   }else{
-    Serial.println("Portal not startd");
+    ESP_LOGE(TAG_MAIN,"Portal not startd");
   }
-  Serial.println("HTTP server started");
-
-  Serial.println(WiFi.SSID());
-  long rssi = WiFi.RSSI();
-  Serial.print("RSSI:");
-  Serial.println(rssi);
+  ESP_LOGV(TAG_MAIN,"HTTP server started");
+  ESP_LOGV(TAG_MAIN,"Connected SSID: %s",WiFi.SSID() );
+  ESP_LOGV(TAG_MAIN,"RSSI:%d",WiFi.RSSI());
   //
   byte mac[6];
   WiFi.macAddress(mac);
-  Serial.print("WiFi MAC: ");
-  Serial.print(mac[5],HEX);
-  Serial.print(":");
-  Serial.print(mac[4],HEX);
-  Serial.print(":");
-  Serial.print(mac[3],HEX);
-  Serial.print(":");
-  Serial.print(mac[2],HEX);
-  Serial.print(":");
-  Serial.print(mac[1],HEX);
-  Serial.print(":");
-  Serial.println(mac[0],HEX);
+  ESP_LOGV(TAG_MAIN,"WiFi MAC= %x:%x:%x:%x:%x:%x",
+      mac[5],
+      mac[4],
+      mac[3],
+      mac[2],
+      mac[1],
+      mac[0]
+  );
   //
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  ESP_LOGV(TAG_MAIN,"IP address: %s",WiFi.localIP().toString().c_str());
   // NTP //////////////////////////////
   //init and get the time
   for (int i=0;i<=23;i++) {
@@ -299,7 +295,7 @@ void setup() {
   #ifdef CAMERA_MODEL_M5STACK_PSRAM
     struct tm timeinfo;
     if(!getLocalTime(&timeinfo)){
-      Serial.println("Failed to obtain time");
+      ESP_LOGV(TAG_MAIN,"Failed to obtain time");
       return;
     }
     _rtc_data_t  timeToSet;
@@ -315,26 +311,26 @@ void setup() {
   //botClient.setInsecure();  
   bot.updateToken(configItems.botTTelegram);
   if ( !configItems.botTTelegram.equals("0123456789")  ) {
-    Serial.println("I am Alive :-) ");
+    ESP_LOGV(TAG_MAIN,"I am Alive :-) ");
     //botClient.setCACert(TELEGRAM_CERTIFICATE_ROOT);
     //botClient.setInsecure();
     if(bot.getMe()){
-      Serial.println("bot.getMe():TRUE");
+      ESP_LOGV(TAG_MAIN,"bot.getMe():TRUE");
     }else{
-      Serial.println("bot.getMe():FALSE");
+      ESP_LOGV(TAG_MAIN,"bot.getMe():FALSE");
     }
     //bot.sendMessage(configItems.adminChatIds, "I am Alive!!", "");
     bool bSendMessageWithReplyKeyboard=bot.sendMessageWithReplyKeyboard(configItems.adminChatIds, "I am Alive :-) ", "Markdown", formulateKeyboardJson(), true);
     if(bSendMessageWithReplyKeyboard){
-      Serial.println("bSendMessageWithReplyKeyboard:TRUE");
+      ESP_LOGV(TAG_MAIN,"bSendMessageWithReplyKeyboard:TRUE");
     }else{
-      Serial.println("bSendMessageWithReplyKeyboard:FALSE");
+      ESP_LOGV(TAG_MAIN,"bSendMessageWithReplyKeyboard:FALSE");
     }
     if (configItems.alertALL && configItems.userChatIds.toDouble()>0){
       bot.sendMessageWithReplyKeyboard(configItems.userChatIds,"I am Alive :-) ", "Markdown", formulateKeyboardJson(), true);
     }
   }else{
-    Serial.println("Bot Token not yet set, I am not alive yet :-( ");
+    ESP_LOGV(TAG_MAIN,"Bot Token not yet set, I am not alive yet :-( ");
   }
   
   ///////////////////
@@ -352,24 +348,24 @@ void setup() {
   pinMode(BUZZER_PIN,OUTPUT);
 #endif
   bTelegramBotInitiated=true;
-Serial.println("SETUP END: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+ESP_LOGV(TAG_MAIN,"SETUP END: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 }
 //****************************************************************//
 //**********************   The LOOP   ****************************//
 //****************************************************************//
 void loop() {
-  log_d("START LOOP *****************************************************");
+  ESP_LOGV(TAG_MAIN,"START LOOP *****************************************************");
   Portal.handleClient();
 
 #if defined(PIR_PIN)
   int vPIR = digitalRead(PIR_PIN);
   /*
   Serial.print("PIR VALUE:");
-  Serial.println(vPIR );
+  ESP_LOGV(TAG_MAIN,vPIR );
   */
   if ( configItems.motDetectOn && vPIR==PIR_PIN_ON ) {
     String result= alertTelegram("PIR Motion Detected.");
-    Serial.println("result: "+result);
+    ESP_LOGV(TAG_MAIN,"result: %s ",result);
     bMotionDetected=true;
     delay(100);
   } else{
@@ -379,11 +375,11 @@ void loop() {
 #if defined(BUZZER_PIN)
   if (bMotionDetected && configItems.useBuzzer){
     // Active Buzzer
-    Serial.println("Buzzer ON");
+    ESP_LOGV(TAG_MAIN,"Buzzer ON");
     digitalWrite (BUZZER_PIN, BUZZER_PIN_ON); //turn buzzer on
     delay(1000);
   }else{
-    //Serial.println("Buzzer OFF");
+    //ESP_LOGV(TAG_MAIN,"Buzzer OFF");
     digitalWrite (BUZZER_PIN, !BUZZER_PIN_ON);  //turn buzzer off
   }
 #endif
@@ -392,10 +388,10 @@ void loop() {
   line2="                    ";
   line3=WiFi.localIP().toString();
   if (displayEnabled){
-    Serial.println("displayEnabled:TRUE");
+    ESP_LOGV(TAG_MAIN,"displayEnabled:TRUE");
     display_Textlines( line1, line2 , line3 );
   }else{
-    Serial.println("displayEnabled:FALSE");
+    ESP_LOGV(TAG_MAIN,"displayEnabled:FALSE");
     display.clearDisplay();
     display.display();
   }
@@ -403,24 +399,23 @@ void loop() {
   //////////////////////////////////////////////
   // Computer Vision Motion Detection
   if (configItems.motionDetectVC ){
-    ESP_LOGD ("MAIN","CheckMotion before.");
+    ESP_LOGV(TAG_MAIN,"CheckMotion before.");
     haveMotion = checkMotion(haveMotion , (&configItems)->frameSize ,haveMotion );
-    ESP_LOGD ("MAIN","CheckMotion After.");
+    ESP_LOGV(TAG_MAIN,"CheckMotion After.");
     if (haveMotion) {
       alertTelegram("CV Motion detected");
     }
   }
   //////////////////////////////////////////////
   if (millis() > Bot_lasttime + Bot_mtbs)  {
-    Serial.println("bot.getUpdates() !");
-    
+    ESP_LOGV(TAG_MAIN,"bot.getUpdates() !");    
     int numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
     while(numNewMessages) {
-      Serial.println("got response#1");
+      ESP_LOGV(TAG_MAIN,"got response#1");
       handleNewMessages(numNewMessages);
-      Serial.println("got response#2");
+      ESP_LOGV(TAG_MAIN,"got response#2");
       numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
-      Serial.println("got response#3");
+      ESP_LOGV(TAG_MAIN,"got response#3");
     }
     if (bTakePhotoTick){
       alertTelegram("time-lapse tick!");
@@ -430,9 +425,9 @@ void loop() {
     #ifdef CAMERA_MODEL_M5STACK_PSRAM
       rtc_date_t date;
       bmm8563_getTime(&date);
-      Serial.printf("Time: %d/%d/%d %02d:%02d:%-2d\r\n", date.year, date.month, date.day, date.hour, date.minute, date.second);
-      Serial.printf("volt: %d mv\r\n", bat_get_voltage());
-      Serial.printf("ADC: %d mv\r\n", bat_get_adc_raw());
+      ESP_LOGV(TAG_MAIN,"Time: %d/%d/%d %02d:%02d:%-2d", date.year, date.month, date.day, date.hour, date.minute, date.second);
+      ESP_LOGV(TAG_MAIN,"volt: %d mv", bat_get_voltage());
+      ESP_LOGV(TAG_MAIN,"ADC: %d mv", bat_get_adc_raw());
     #endif
     /////////////////////////////////////////////
     #if defined(PIR_PIN)
@@ -449,10 +444,10 @@ void loop() {
       #ifdef CAMERA_MODEL_M5STACK_PSRAM
         // esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
         // X sec later will wake up
-        Serial.println("bmm8563_setTimerIRQ");
+        ESP_LOGV(TAG_MAIN,"bmm8563_setTimerIRQ");
         bmm8563_setTimerIRQ(configItems.lapseTime*60);
       #endif
-      Serial.println("esp_sleep_enable_timer_wakeup");
+      ESP_LOGV(TAG_MAIN,"esp_sleep_enable_timer_wakeup");
       //esp_deep_sleep((uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
       esp_sleep_enable_timer_wakeup( (uint64_t) configItems.lapseTime*60*uS_TO_S_FACTOR);
       bESPMayGoToSleep=true;
@@ -471,17 +466,17 @@ void loop() {
       alertTelegram("ESP is going to sleep "+extraMessage,false);
       #ifdef CAMERA_MODEL_M5STACK_PSRAM
         // disable bat output, will wake up after 5 sec, Sleep current is 1~2μA
-        Serial.println("bat_disable_output");
+        ESP_LOGV(TAG_MAIN,"bat_disable_output");
         bat_disable_output();
       #endif
-      Serial.println("esp_deep_sleep_start");
+      ESP_LOGV(TAG_MAIN,"esp_deep_sleep_start");
       esp_wifi_stop();
       esp_deep_sleep_start();
     }
     /////////////////////////////////////////////
     Bot_lasttime = millis();
   }
-  log_d("END LOOP *****************************************************");
+  ESP_LOGV(TAG_MAIN,"END LOOP *****************************************************");
 }
 //****************************************************************//
 
@@ -502,21 +497,18 @@ void led_breathe_test() {
 ////////////////////////////////////////////////////////////////////////////
 esp_sleep_wakeup_cause_t print_wakeup_reason(){
   esp_sleep_wakeup_cause_t wakeup_reason;
-
   wakeup_reason = esp_sleep_get_wakeup_cause();
-
   switch(wakeup_reason)
   {
-    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
-    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
-    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
-    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    case ESP_SLEEP_WAKEUP_EXT0 : ESP_LOGV(TAG_MAIN,"Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : ESP_LOGV(TAG_MAIN,"Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : ESP_LOGV(TAG_MAIN,"Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : ESP_LOGV(TAG_MAIN,"Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : ESP_LOGV(TAG_MAIN,"Wakeup caused by ULP program"); break;
     default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
   return (wakeup_reason);
 }
-
 ////////////////////////////////////////////////////////////////////////////
 void tick(){
   bTakePhotoTick=true;
@@ -536,33 +528,33 @@ void applyConfigItem (config_item* ci) {
   s->set_saturation(s,ci->set_saturation);
   s->set_quality(s,ci->jpegQuality);
   //
-  Serial.printf("* > s->status.scale:%d\n",s->status.scale);
-  Serial.printf("* > s->status.binning:%d\n",s->status.binning);
-  Serial.printf("* > s->status.quality:%d\n",s->status.quality);					//0 - 63
-  Serial.printf("* > s->status.brightness:%d\n",s->status.brightness);			//-2 - 2
-  Serial.printf("* > s->status.contrast:%d\n",s->status.contrast);				//-2 - 2
-  Serial.printf("* > s->status.saturation:%d\n",s->status.saturation);			//-2 - 2
-  Serial.printf("* > s->status.sharpness:%d\n",s->status.sharpness);				//-2 - 2
-  Serial.printf("* > s->status.denoise:%d\n",s->status.denoise);
-  Serial.printf("* > s->status.special_effect:%d\n",s->status.special_effect);	//0 - 6
-  Serial.printf("* > s->status.wb_mode:%d\n",s->status.wb_mode); 					//0 - 4
-  Serial.printf("* > s->status.awb:%d\n",s->status.awb);
-  Serial.printf("* > s->status.awb_gain:%d\n",s->status.awb_gain);
-  Serial.printf("* > s->status.aec:%d\n",s->status.aec);
-  Serial.printf("* > s->status.aec2:%d\n",s->status.aec2);
-  Serial.printf("* > s->status.ae_level:%d\n",s->status.ae_level);				//-2 - 2
-  Serial.printf("* > s->status.aec_value:%d\n",s->status.aec_value);				//0 - 1200
-  Serial.printf("* > s->status.agc:%d\n",s->status.agc);
-  Serial.printf("* > s->status.agc_gain:%d\n",s->status.agc_gain);				//0 - 30
-  Serial.printf("* > s->status.gainceiling:%d\n",s->status.gainceiling);			//0 - 6
-  Serial.printf("* > s->status.bpc:%d\n",s->status.bpc);
-  Serial.printf("* > s->status.wpc:%d\n",s->status.wpc);
-  Serial.printf("* > s->status.raw_gma:%d\n",s->status.raw_gma);
-  Serial.printf("* > s->status.lenc:%d\n",s->status.lenc);
-  Serial.printf("* > s->status.hmirror:%d\n",s->status.hmirror);
-  Serial.printf("* > s->status.vflip:%d\n",s->status.vflip);
-  Serial.printf("* > s->status.dcw:%d\n",s->status.dcw);
-  Serial.printf("* > s->status.colorbar:%d\n",s->status.colorbar);
+  ESP_LOGV(TAG_MAIN,"* > s->status.scale:%d",s->status.scale);
+  ESP_LOGV(TAG_MAIN,"* > s->status.binning:%d",s->status.binning);
+  ESP_LOGV(TAG_MAIN,"* > s->status.quality:%d",s->status.quality);					//0 - 63
+  ESP_LOGV(TAG_MAIN,"* > s->status.brightness:%d",s->status.brightness);			//-2 - 2
+  ESP_LOGV(TAG_MAIN,"* > s->status.contrast:%d",s->status.contrast);				//-2 - 2
+  ESP_LOGV(TAG_MAIN,"* > s->status.saturation:%d",s->status.saturation);			//-2 - 2
+  ESP_LOGV(TAG_MAIN,"* > s->status.sharpness:%d",s->status.sharpness);				//-2 - 2
+  ESP_LOGV(TAG_MAIN,"* > s->status.denoise:%d",s->status.denoise);
+  ESP_LOGV(TAG_MAIN,"* > s->status.special_effect:%d",s->status.special_effect);	//0 - 6
+  ESP_LOGV(TAG_MAIN,"* > s->status.wb_mode:%d",s->status.wb_mode); 					//0 - 4
+  ESP_LOGV(TAG_MAIN,"* > s->status.awb:%d",s->status.awb);
+  ESP_LOGV(TAG_MAIN,"* > s->status.awb_gain:%d",s->status.awb_gain);
+  ESP_LOGV(TAG_MAIN,"* > s->status.aec:%d",s->status.aec);
+  ESP_LOGV(TAG_MAIN,"* > s->status.aec2:%d",s->status.aec2);
+  ESP_LOGV(TAG_MAIN,"* > s->status.ae_level:%d",s->status.ae_level);				//-2 - 2
+  ESP_LOGV(TAG_MAIN,"* > s->status.aec_value:%d",s->status.aec_value);				//0 - 1200
+  ESP_LOGV(TAG_MAIN,"* > s->status.agc:%d",s->status.agc);
+  ESP_LOGV(TAG_MAIN,"* > s->status.agc_gain:%d",s->status.agc_gain);				//0 - 30
+  ESP_LOGV(TAG_MAIN,"* > s->status.gainceiling:%d",s->status.gainceiling);			//0 - 6
+  ESP_LOGV(TAG_MAIN,"* > s->status.bpc:%d",s->status.bpc);
+  ESP_LOGV(TAG_MAIN,"* > s->status.wpc:%d",s->status.wpc);
+  ESP_LOGV(TAG_MAIN,"* > s->status.raw_gma:%d",s->status.raw_gma);
+  ESP_LOGV(TAG_MAIN,"* > s->status.lenc:%d",s->status.lenc);
+  ESP_LOGV(TAG_MAIN,"* > s->status.hmirror:%d",s->status.hmirror);
+  ESP_LOGV(TAG_MAIN,"* > s->status.vflip:%d",s->status.vflip);
+  ESP_LOGV(TAG_MAIN,"* > s->status.dcw:%d",s->status.dcw);
+  ESP_LOGV(TAG_MAIN,"* > s->status.colorbar:%d",s->status.colorbar);
   delay(500);
   //*/
   // non configurable params:

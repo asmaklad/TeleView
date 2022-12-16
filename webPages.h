@@ -15,12 +15,14 @@ AutoConnect Portal(Server);
 AutoConnectConfig acConfig;
 AutoConnectAux auxPageConfig;
 AutoConnectAux auxPageCapture;
+AutoConnectAux auxPageStream;
 
 char   dateTime[100];
 time_t currentTimeMills ;
 time_t timeB;
 struct tm  *tmNowTM , *tmDiffTM;
 
+void printLocalTime();
 ////////////////////////////////////////////////////////////////////////////////
 // for the streaming server
 #define PART_BOUNDARY "ef2ac69f9149220e889abc22b81d1401"
@@ -110,8 +112,6 @@ static void stream_handler(){
   client.flush();   
 }
 ///////////////////////////////////////////////////////////
-void printLocalTime();
-///////////////////////////////////////////////////////////
 void populateResolutionsSelects(AutoConnectAux& aux){
   //aux.fetchElement();
   /*
@@ -156,8 +156,14 @@ bool captivePortalStarted(IPAddress ip){
 }
 ///////////////////////////////////////////////////////////
 String onCapture(AutoConnectAux& aux, PageArgument& args) {
-  ESP_LOGV(TAG_WEB,"onCapture:Portal.where(): %s", Portal.where());
-  ESP_LOGV(TAG_WEB,"onCapture:args.size() %d",args.size());
+  ESP_LOGV(TAG_WEB,"Portal.where(): %s", Portal.where());
+  ESP_LOGV(TAG_WEB,"args.size() %d",args.size());
+  return String("");
+}
+///////////////////////////////////////////////////////////
+String onStream(AutoConnectAux& aux, PageArgument& args) {
+  ESP_LOGV(TAG_WEB,"Portal.where(): %s", Portal.where());
+  ESP_LOGV(TAG_WEB,"args.size() %d",args.size());
   return String("");
 }
 ///////////////////////////////////////////////////////////
@@ -189,22 +195,22 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     }
   } 
   */ 
-#ifndef  I2C_DISPLAY_ADDR
+  #ifndef  I2C_DISPLAY_ADDR
     aux["XscreenOn"].as<AutoConnectCheckbox>().enable=false;
     aux["XscreenFlip"].as<AutoConnectCheckbox>().enable=false;
-#endif
-#ifndef  PIR_PIN
+  #endif
+  #ifndef  PIR_PIN
     aux["XmotDetectOn"].as<AutoConnectCheckbox>().enable=false;
-#endif
-#ifndef  SD_CARD_ON
+  #endif
+  #ifndef  SD_CARD_ON
     aux["XsaveToSD"].as<AutoConnectCheckbox>().enable=false;
-#endif
-#ifndef IS_THERE_A_FLASH
+  #endif
+  #ifndef IS_THERE_A_FLASH
     aux["XuseFlash"].as<AutoConnectCheckbox>().enable=false;
-#endif
-#ifndef  BUZZER_PIN
+  #endif
+  #ifndef  BUZZER_PIN
     aux["XuseBuzzer"].as<AutoConnectCheckbox>().enable=false;
-#endif
+  #endif
 
   // not yet implemented:
   aux["Xset_whitebal"].as<AutoConnectCheckbox>().enable=false;
@@ -336,8 +342,7 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
 // [:ADD STRING HERE:]#3
 // [:ADD BOOLEAN HERE:]#3
 */
-static const char AUX_CONFIGPAGE[] PROGMEM = R"(
-{
+static const char AUX_CONFIGPAGE[] PROGMEM = R"({
     "title": "Options",
     "uri": "/teleView",
     "menu": true,
@@ -700,11 +705,9 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"(
             "style": "text-align:center;color:#2f4f4f;padding:10px;"
         }
     ]
-}
-)";
+})";
 ///////////////////////////////////////////////////////////
-static const char AUX_CAPTURE[] PROGMEM = R"(
-{
+static const char AUX_CAPTURE[] PROGMEM = R"({
   "title": "Capture",
   "uri": "/Xcapture",
   "menu": true,
@@ -718,11 +721,29 @@ static const char AUX_CAPTURE[] PROGMEM = R"(
     {
       "name": "CCapture",
       "type": "ACElement",
-      "value": "<img src=\"/capture.jpg\"/></img>"
+      "value": "<img src=\"/capture\"/></img>"
     }
   ]
-}
-)";
+})";
+///////////////////////////////////////////////////////////
+static const char AUX_STREAM[] PROGMEM = R"({
+  "title": "Stream",
+  "uri": "/Xstream",
+  "menu": true,
+  "element": [
+    {
+      "name": "CCaption",
+      "type": "ACText",
+      "value": "<h2>TeleView Stream</h2>",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
+    },
+    {
+      "name": "CCstream",
+      "type": "ACElement",
+      "value": "<img src=\"/stream\"/></img>"
+    }
+  ]
+})";
 ///////////////////////////////////////////////////////////
 // Redirects from root to the /Xcapture page.
 void rootPage() {
@@ -734,7 +755,6 @@ void rootPage() {
   Server.client().stop();
 }
 ///////////////////////////////////////////////////////////
-
 void capture2Page() {
   String  content =
     "<html>"
@@ -802,8 +822,7 @@ void capture2Page() {
   Server.send(200,"text/html",content);
 }
 ////////////////////////////////////////////////////////////////////////////
-void printLocalTime()
-{
+void printLocalTime(){
   struct tm timeinfo;
   if(!getLocalTime(&timeinfo)){
     ESP_LOGE(TAG_WEB,"Failed to obtain time");
@@ -824,14 +843,9 @@ void deletePage() {
 void capturePage(){
   if (configItems.webCaptureOn){
     camera_fb_t * fb = NULL;
-    WiFiClient client = Server.client();
-    if (!client) {
-      return;
-    }    
-    client.flush();
     fb = esp_camera_fb_get();
     if (!fb) {
-      ESP_LOGV(TAG_WEB,"Camera capture failed");
+      ESP_LOGE(TAG_WEB,"Camera capture failed");
       return;
     } else {
       Server.sendHeader("Content-Disposition", "inline; filename=capture.jpg");
@@ -842,20 +856,12 @@ void capturePage(){
       esp_camera_fb_return(fb);
       fb = NULL;
     }
-    client.println(configItems.deviceName);
-    client.flush();
-    client.stop();
   }
 }
 ///////////////////////////////////////////////////////////
 void capturePageJpeg(){
   if (configItems.webCaptureOn){
     camera_fb_t * fb = NULL;
-    WiFiClient client = Server.client();
-    if (!client) {
-      return;
-    }
-    client.flush();
     fb = esp_camera_fb_get();
     if (!fb) {
       ESP_LOGE(TAG_WEB,"Camera capture failed");
@@ -869,9 +875,6 @@ void capturePageJpeg(){
       esp_camera_fb_return(fb);
       fb = NULL;
     }
-    client.println(configItems.deviceName);
-    client.flush();
-    client.stop();
   }
 }
 ///////////////////////////////////////////////////////////

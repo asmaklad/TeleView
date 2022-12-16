@@ -210,10 +210,10 @@ void setup() {
   Portal.host().on("/delete",deletePage);
   Portal.host().on("/capture",capturePage);
   Portal.host().on("/capture.jpg",capturePageJpeg);
-  //Portal.host().on("/stream",stream_handler);
+  Portal.host().on("/stream",stream_handler);
   //Portal.host().on();
-  Portal.append("/capture2","Capture2",capture2Page);
-  Portal.append("/stream","Stream",stream_handler);
+  //Portal.append("/capture2","Capture2",capture2Page);
+  //Portal.append("/stream","Stream",stream_handler);
   //
   auxPageConfig.load(AUX_CONFIGPAGE);
   populateResolutionsSelects(auxPageConfig);
@@ -222,8 +222,13 @@ void setup() {
   auxPageCapture.load(AUX_CAPTURE);
   auxPageCapture.on(onCapture);
   //
+  auxPageStream.load(AUX_STREAM);
+  auxPageStream.on(onStream);
+  //
+  //
   Portal.join(auxPageCapture);
   Portal.join(auxPageConfig);
+  Portal.join(auxPageStream);
   ////////////////////////////
   acConfig.apid = configItems.deviceName;
   acConfig.psk  = "tv-ei-694";

@@ -40,7 +40,17 @@ void smtpCallback(SMTP_Status status);
 int Bot_mtbs = 1000; //mean time between scan messages
 long Bot_lasttime;   //last time messages' scan has been done
 String keyboardJson = "" ;
-boolean bSetLapseMode=false;
+
+//boolean bSetLapseMode=false;
+
+enum telegramAnswerCollectionMode {
+  MODE_SET_NONE=0
+  ,MODE_SET_lapseTime=1
+  ,MODE_SET_cvIntervalSec=2
+  ,MODE_SET_cvChangePercent=3
+  //[:ADD INT HERE:]#4
+  //[:ADD STRING HERE:]#4
+} bTeleAnsMode =MODE_SET_NONE ;
 
 ////////////////////////////////////////////////
 String alertTelegram(String msg,boolean messageOnly=false);
@@ -90,6 +100,10 @@ String formulateKeyboardJson(){
   lkeyboardJson += ",[\"/moreSettings\"";
   lkeyboardJson +=     ",\"/changeRes\"]";
   lkeyboardJson += ",[\"/setlapse\"";
+  // [:ADD BOOLEAN HERE:]#7
+  // [:ADD INT HERE:]#7
+  lkeyboardJson += ",\"/setcvChangePercent\"]";
+  lkeyboardJson += ",[\"/setcvIntervalSec\"";
   lkeyboardJson +=     ",\"/restartESP\"]";
 
   lkeyboardJson += "]";
@@ -323,10 +337,18 @@ void handleNewMessages(int numNewMessages) {
         if (from_name == "")
           from_name = "Guest";
         ESP_LOGV(TAG_TELE,"TEXT: %s",text);
-        if (bSetLapseMode) {
-          bSetLapseMode=false;
-          configItems.lapseTime=(int) text.toInt();
-        }
+        //[:ADD INT HERE:]#5
+        //[:ADD STRING HERE:]#5
+        if (bTeleAnsMode==MODE_SET_lapseTime) {
+          bTeleAnsMode=MODE_SET_NONE;
+          configItems.lapseTime=(int) text.toInt(); }
+        if (bTeleAnsMode==MODE_SET_cvChangePercent) {
+          bTeleAnsMode=MODE_SET_NONE;
+          configItems.cvChangePercent=(int) text.toInt(); }
+        if (bTeleAnsMode==MODE_SET_cvIntervalSec) {
+          bTeleAnsMode=MODE_SET_NONE;
+          configItems.cvIntervalSec=(int) text.toInt(); }
+        ////////////////////////////////////////////////////
         if (text == "/sendPhoto") {
           ESP_LOGV(TAG_TELE,"handleNewMessages/sendPhoto:BEGIN");
           if(bot.messages[i].type == "channel_post") {
@@ -349,12 +371,27 @@ void handleNewMessages(int numNewMessages) {
           bInlineKeyboardExtraOptions=false;
           bInlineKeyboardResolution=true;
           bot.sendMessageWithInlineKeyboard(chat_id, "Select the resolution", "", formulateResolutionInlineKeyBoard());
-        }else if(text == "/setlapse") {
+        }
+        //[:ADD INT HERE:]#6
+        //[:ADD STRING HERE:]#6
+        else if(text == "/setlapse") {
           configItems.lapseTime=0;
           bot.sendMessage(chat_id, "Please insert Lapse Time in minutes:", "");
-          bSetLapseMode=true;
+          bTeleAnsMode=MODE_SET_lapseTime;
           bPrintOptions=false;
-        }else if(text == "/moreSettings") {
+        }
+        else if(text == "/setcvChangePercent") {
+          configItems.cvChangePercent=0;
+          bot.sendMessage(chat_id, "Please insert CV change percentage:", "");
+          bTeleAnsMode=MODE_SET_cvChangePercent;
+          bPrintOptions=false;
+        }
+        else if(text == "/setcvIntervalSec") {
+          configItems.cvIntervalSec=0;
+          bot.sendMessage(chat_id, "Please insert time in ms between two CV frames:", "");
+          bTeleAnsMode=MODE_SET_cvIntervalSec;
+          bPrintOptions=false;
+        } else if(text == "/moreSettings") {
           configItems.useDeepSleep=false;
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
@@ -370,6 +407,11 @@ void handleNewMessages(int numNewMessages) {
           welcome += "/start       | sends this message\n";
           welcome += "/options     | returns the reply keyboard\n";
           welcome += "/setlapse    | Sets the periodical sending of photo in min (0 is disable)\n";
+          // [:ADD BOOLEAN HERE:]#8
+          // [:ADD INT HERE:]#8
+          welcome += "/setcvChangePercent    | Sets the CV Motion Detect Percent change in number of DarkPixels:\n";
+          welcome += "/setcvIntervalSec    | Sets the CV Motion Detect interval between each 2 consecutive photo capture:\n";
+          
           welcome += "/sendPhoto   | Send a Photo from the camera\n";
           welcome += "/changeRes   | Change the resoltion of the camera\n";
           welcome += "/moreSettings| Access more settings\n";
@@ -671,7 +713,7 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
 
   while ((startTime + waitTime) > millis())
   {
-    ESP_LOGV(TAG_TELE,".");
+    Serial.print(".");
     delay(100);
     while (botClient.available())
     {

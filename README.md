@@ -88,18 +88,35 @@ This will only be available when the sketch is compiled with "#define CAMERA_MOD
 
 ## Required Libraries:
 
-* TeleView was tested/compiled with these versions of the libraries. just use the latest and if you face problems, then downgrade to those versions
+* TeleView was tested/compiled with these library versions. Just use the latest and if you face problems, then downgrade to those versions (more about this after the table)
 
 Library | Version
 --------| ---------
-ESP32 board libs | 1.0.6
+ESP32 board libs (in the board manager) | 1.0.6
 UniversalTelegramBot | 1.3.0
-ArduinoJson | 6.17.3
-Adafruit GFX Library  | 1.10.7
-Adafruit  BusIO | 1.7.3
-Adafruit  SSD1306 | 2.4.4
-AutoConnect | 1.2.2
-ESP Mail Client(Mobizt) | 1.1.7
+ArduinoJson | 6.19.4
+Adafruit GFX Library  | 1.11.3
+Adafruit  BusIO | 1.14.1
+Adafruit  SSD1306 | 2.5.7
+AutoConnect | 1.4.0
+ESP Mail Client(Mobizt) | 2.7.0
+
+### A note about the ESP32 core Libraries:
+Online, there are two URL's to be added to the Arduino Prefrences -> "Additional Board Managers URL"
+1. this one is the normal and mentioned everywhere : https://dl.espressif.com/dl/package_esp32_index.json
+   this allows the installtion of ESP32 core up to 1.0.6
+   Teleview project uses The ESP32-CAM API 1.0.6 .
+2. this one which is mentioned by Espressif: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json .
+   This one allows for more version, up to 2.0.3 (till the time of writing this).
+   Also Allows ESP32-S2, S3 and C3 boards.
+   Teleview project is not compatible The ESP32-CAM API beyond 1.0.6. 
+   Some how there are breaking changes introduced in 2.0.0 !
+
+Version 1.0.6 works fine from both sources. However, from version 2 upward (availbale only on the 2nd link), 
+a lot of exceptions and stack traces appears.
+
+> I recommend using ESP32 Core Libs version 1.0.6 from this link: https://dl.espressif.com/dl/package_esp32_index.json
+  
 
 
 ## User Guide:
@@ -143,9 +160,10 @@ Also a section exists if an Active Buzzer is connected which is triggered with t
 These precompiler defines, are used upon compilation to utilize or ommit parts of the code depending on the features of the board.
 
 ### Setting up the WiFi:
-This sektch uses the Autoconnect Arduino library (https://github.com/Hieromon/AutoConnect) to let the user configure WiFi SSID and Password.
+This sektch uses the Autoconnect Arduino library (https://github.com/Hieromon/AutoConnect) to let the user configure WiFi SSID and Password at runtime.
 When the sketch starts, it looks for a familiar WiFi. If it can't find one, it will start its own Access Point where the owner can connect and configure the WIFI. 
-First Time- SSID will be "TeleView" with the password "tv-ei-694"
+
+> First Time installtion: SSID will be "TeleView" with the password "tv-ei-694"
 
 The AutoConnect library will start a portal with the page /config to configure the Wifi and other configuration parameters.
 
@@ -162,7 +180,7 @@ A Telegram-bot-token is required to use the Telegrambot feature.
 You may follow these instructions to get a Telegram Bot Token through the @botFather.
 https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-telegram?view=azure-bot-service-4.0
 
-* You will also need to find out your UserId or in Telegram it is refered as ChatID.
+* You will also need to find out your UserId, or in Telegram it is refered as ChatID.
 This could be acquired through a visit to the @chatid_echo_bot Telegrambot https://web.telegram.org/#/im?p=@chatid_echo_bot 
 * Insert the token and the ChatID of the Admin in the web-interface found at the url "http://<youDeviceAddress>/teleView" and save.
 * Add the Bot to your telegram contacts.
@@ -175,22 +193,23 @@ This could be acquired through a visit to the @chatid_echo_bot Telegrambot https
 * Go to webUI and a new tab will appera with page title "Update". it wil have a browse and upload buttons use them upload the new bin file from the next  step.
 * Then follow these Instructions to generate the new bin file :  https://hieromon.github.io/AutoConnect/otabrowser.html#how-to-make-the-binary-sketch
 * once the new firmware is uplaoded and implemented, the ESP will Reboot and OTA will be disbaled again. 
-*  OTA configuration item is not stored. The ESP will boot up with status disabled by default.
+* OTA configuration item is not stored. The ESP will boot up with status disabled by default.
 
 ### Having more than one user to use the bot: 
 Q) If you are a family and would like to have two or more people access and manage the Telegram bot. how can this be preformed?
-Q) if I have multiple Bots and want to controll all of them from one place ?
+Q) if I have multiple Bots and want to controll all of them from one chat group ?
 
 Answer-A) 
-Use the Admin_id and User_id for the second user. However remeber that following events are sent only to the chat with the Admin_id:
+Use the Admin_id and User_id for the second user. However, remember that following events are sent only to the chat with the Admin_id:
 * I am Alive message
 * Motion Detection 
 * Time-Lapse
 
 Answer-B) 
+> this is cool, you shoul really try it !
 Using Telegram Groups:
   1) Create a Telegram group. Let us call it MyCameraBotGroup.
-  2) The MyCameraBotGroup has now you only as an administrator.
+  2) The MyCameraBotGroup has now only you as an administrator.
   3) Add the bot(s) you want in that group and make them admins.
   4) Add your other family members in that group as well and make them admins (if you want them to also send commands).
   5) Edit the rights of the Bots and Members as you please.
@@ -215,7 +234,7 @@ Feature 	  |   Description
 /setLapse   | 	It will ask to insert the lapse time in minutes. insert 0 to disbale, 60 for every 1 Hour, 1440 for once a day ...etc
 /webCaptureOn	|	This will disbale/enable the ./capture and ./capture.jpg urls.
 
-Will only be shown in TTGO_T1 : (or when enabled in camera_pins.h)
+Will only be shown in TTGO_T1 : (or when an old display is enabled in camera_pins.h)
 Feature 	  |   Description
 :------------ |  :----------------
 /screenOn	  |	Use the screen to display useful information or switch it off.
@@ -247,7 +266,7 @@ Feature 	  |   Description
 3) Buzzer PIN could be connected to any other External Alert. Example: a siren , a water pistol , a nerf gun ..etc
 
 ## A note about Deep Sleep:
-Deep sleep will will be only utilized if one of those options is enabled:
+Deep sleep will be only utilized if one of those options is enabled:
 1) PIR motion detection
 2) time-lapse
 
@@ -258,7 +277,7 @@ Deep Sleep will not play well with those features:
 
 if it happens you put the ESP into Deep sleep and somehow you chnaged your mind, then follow these steps:
 1) issue the command "/setLapse" by typing it or clicking the button.
-2) restart your ESP from the physical button on theboard or by disconnecting and then connecting it again.
+2) restart your ESP from the physical button on the board or by disconnecting and then connecting it again.
 
 ## The Configuration Web interface
 
@@ -268,10 +287,12 @@ This root home page displays a preview of the camera and some basis info. The co
 ### http://TeleView.local/_ac 
 The Autoconnect portal configures the WiFi access and has a link to the bot's configuration page "./teleView". It has the following elements:
 
+Please note the below list is not exahustive.
+
 ### Intput Text
 |UI Control          | Description
 |:-------------------| :-----------
-|Device Name         |The name of the device , this will be used as a DNS entry in the local LAN and identifying the device.
+|Device Name         | The name of the device , this will be used as a DNS entry in the local LAN and identifying the device.
 |Lapse Time-min      | Every X min , the board will send a photo to the admin. set this to 0 to disbale time-lapsing feature.
 |Telegram Bot Token  | This is the token you get from the BotFather.
 |Admin Chat ID       | Telegram commands will only be processed if the Chat_id of the incomming Message is the same as this Admin_id or User_id ( a Security feature ). This could be chat_id of a Person or a Group where the bot is registered as admin.
@@ -287,6 +308,7 @@ Vertical Flip					|	Upside down effect on the Captured image.
 Screen Flip					|	Upside down of the OLED display.
 OLED Display is On			|	Enable/Disable The OLED display.
 Motion Detection Enabled		|	Enable/Disable the Motion Detection Feature.
+...
 
 ### ComboBoxes:
 ComboBoxes | Description
@@ -332,4 +354,43 @@ SMTP Username: Complete Live/Hotmail email address
 SMTP Password: Your Windows Live Hotmail password
 SMTP Port: 587
 SMTP TLS/SSL Required: Yes
+
+## The computer Vision Motion Detection
+> this is an experimental feature, and I could use some help testing and refining it.
+I have been looking around for a mature library online for the ESP32 that is flexible and expandable in the CAM boards that it supports.
+But unfortunately, I couldn't find anything I could use. so I hade to build a simple-toy-algorithm in motionDetect.h by my self.
+* It works by:
+  * taking two consequetive GRAYSCAL 320x240 frame captures. 
+  * counts the number of BLACK, WHITE , GRAY pixels in each frame.
+    * Black Pixels have teh value of 0 to 85
+    * White Pixels have the value of 255-85 to 255
+    * the Gray Pixels have the value of 85 to 255-85
+* Compare the number of BLACK, WHITE, GRAY Pixesl, and if there is difference of more than XX % percent to the total count of pixels between the frames, then an alert is triggered.
+* So far, there are two control parameters that are configurable through the WebUI:
+    * The Interval between the two consequetive frame captures in ms (i.e. 500 = half a second)
+    * The percentage of change in previous frame pixels and current frame pixels.
+* One important use I could have; is to identify day and night and decide whether asnapshot should be taken or not during using the timelapse features. (not yet implemented)
+
+## capture and streaming
+There are three enpoints for jpeg capture and streaming.
+
+  > It is highly recommended **NOT** to contact the ESP with more than one client at the same time.
+
+### streaming : /streaming
+This will stream in MJPEG as fast as it can. 
+However, it will check for the telegram events every 25 frames which will make it a bit choppy.
+The code will auotmatically stop of the client is closed (once you close the browser tab or move to a another endpoint)
+  > Content-Type: multipart/x-mixed-replace;boundary=...
+
+The CV motion detection will produce alot of false events during the streaming.
+I recomend to deactivate CVMotionDetect feature during streaming.
+
+### Capture as an image : /capture
+will send a jpeg  with the header: ( the picture will be displayed directly in the brwoser )
+  > Content-Disposition:inline; filename=capture.jpg
+
+### Capture as an atatchment jpg file: /capture.jpg
+will send a jpeg  with the header: (as an attachement or downloadable file)
+  > Content-Disposition:attachment; filename=capture.jpg
+
 

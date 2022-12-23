@@ -2,6 +2,7 @@
 #define CAMERA_PINS_H
 
 #if defined(CAMERA_MODEL_WROVER_KIT)
+#define CAMERA_NAME "CAMERA_MODEL_WROVER_KIT"
 #define PWDN_GPIO_NUM    -1
 #define RESET_GPIO_NUM   -1
 #define XCLK_GPIO_NUM    21
@@ -22,6 +23,7 @@
 #define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_ESP_EYE)
+#define CAMERA_NAME "CAMERA_MODEL_ESP_EYE"
 #define PWDN_GPIO_NUM    -1
 #define RESET_GPIO_NUM   -1
 #define XCLK_GPIO_NUM    4
@@ -42,6 +44,7 @@
 #define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_M5CAM)
+#define CAMERA_NAME "CAMERA_MODEL_M5CAM"
 #define PWDN_GPIO_NUM     -1
 #define RESET_GPIO_NUM    15
 #define XCLK_GPIO_NUM     27
@@ -62,6 +65,7 @@
 #define MAX_RESOULTION    FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_M5STACK_PSRAM)
+#define CAMERA_NAME "CAMERA_MODEL_M5STACK_PSRAM"
 #define PWDN_GPIO_NUM     -1
 #define RESET_GPIO_NUM    15
 #define XCLK_GPIO_NUM     27
@@ -101,6 +105,7 @@
 #include "bmm8563.h"
 
 #elif defined(CAMERA_MODEL_M5STACK_WIDE)
+#define CAMERA_NAME "CAMERA_MODEL_M5STACK_WIDE"
 #define PWDN_GPIO_NUM     -1
 #define RESET_GPIO_NUM    15
 #define XCLK_GPIO_NUM     27
@@ -121,6 +126,7 @@
 #define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_AI_THINKER) //Board definition "AI Thinker ESP32-CAM"
+#define CAMERA_NAME "CAMERA_MODEL_AI_THINKER"
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM      0
@@ -146,6 +152,7 @@
 #define MAX_RESOULTION   FRAMESIZE_UXGA
 
 #elif defined(CAMERA_MODEL_TTGO_T1_CAMERA) // Board definition "ESP32 WROVER Module"
+#define CAMERA_NAME "CAMERA_MODEL_TTGO_T1_CAMERA"
 #define PWDN_GPIO_NUM     26
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM     32
@@ -175,12 +182,18 @@
 #define PIR_PIN_ON        HIGH
 #define BUTTON_PIN        34
 #elif defined(CAMERA_MODEL_TTGO_T1_CAMERA_162) // Board definition "LILYGO T1 v1.6.2 White with Mic"
+#define CAMERA_NAME "CAMERA_MODEL_TTGO_T1_CAMERA_162"
 #define PWDN_GPIO_NUM     -1
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM     4
 #define SIOD_GPIO_NUM     18
 #define SIOC_GPIO_NUM     23
 
+/*
+// Sources: 
+// https://github.com/lewisxhe/esp32-camera-series
+// https://github.com/Xinyuan-LilyGO/LilyGo-Camera-Series/tree/master/esphome
+// same as before
 #define Y9_GPIO_NUM       36
 #define Y8_GPIO_NUM       37
 #define Y7_GPIO_NUM       38
@@ -189,6 +202,29 @@
 #define Y4_GPIO_NUM       14
 #define Y3_GPIO_NUM       13
 #define Y2_GPIO_NUM       34
+*/
+/*
+// Source: Whats written on the package
+#define Y9_GPIO_NUM       13
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       36
+#define Y6_GPIO_NUM       37
+#define Y5_GPIO_NUM       38
+#define Y4_GPIO_NUM       39
+#define Y3_GPIO_NUM       35
+#define Y2_GPIO_NUM       14
+*/
+
+//SOurce https://github.com/Xinyuan-LilyGO/LilyGo-Camera-Series/blob/master/docs/T_CarmerV16.md
+#define Y9_GPIO_NUM       36
+#define Y8_GPIO_NUM       15
+#define Y7_GPIO_NUM       12
+#define Y6_GPIO_NUM       39
+#define Y5_GPIO_NUM       35
+#define Y4_GPIO_NUM       14
+#define Y3_GPIO_NUM       13
+#define Y2_GPIO_NUM       34
+
 #define VSYNC_GPIO_NUM    5
 #define HREF_GPIO_NUM     27
 #define PCLK_GPIO_NUM     25
@@ -200,13 +236,15 @@
 #define I2C_DISPLAY_ADDR  0x3c
 #define USE_OLED_AS_FLASH 1 // the OLEDis on the same side as the camera
 //#define I2C_BME280_ADDR   0x3d
-#define PIR_PIN           19 
+#define PIR_PIN           19  //NOT RTC IO, i.e. Can't wake up the board from sleep
 #define PIR_PIN_ON        HIGH
 #define BUTTON_PIN        15
 
 #define MIC_SCK           26
 #define MIC_WS            32
 #define MIC_SDO           33
+
+#define ENABLE_IP5306
 
 #else
 #error "Camera model not selected"

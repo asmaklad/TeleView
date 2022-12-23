@@ -4,6 +4,9 @@
 #define DISPLAY_H
 #if defined(I2C_DISPLAY_ADDR)
 
+static const char* TAG_OLED = "DISPLAY";
+#include "esp_log.h"
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -29,7 +32,7 @@ void display_init(){
   Wire.begin(SDA_PIN, SCL_PIN);
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, I2C_DISPLAY_ADDR)) { // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
+    ESP_LOGV( TAG_PS, "SSD1306 allocation failed");
     for(;;); // Don't proceed, loop forever
   }
   // Show initial display buffer contents on the screen --

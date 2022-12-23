@@ -2,12 +2,15 @@
 #define TELEGRAM_UTILS_H
 
 #define TELEGRAM_DEBUG 1
+
 #include <UniversalTelegramBot.h>
 #include "esp_camera.h"
 #include "persist.h"
 #include "webPages.h"
 #include <ArduinoJson.h>
 #include <ESP_Mail_Client.h>
+static const char* TAG_TELE = "TELEGRAM";
+#include "esp_log.h"
 
 
 #if defined(SD_CARD_ON)
@@ -37,7 +40,17 @@ void smtpCallback(SMTP_Status status);
 int Bot_mtbs = 1000; //mean time between scan messages
 long Bot_lasttime;   //last time messages' scan has been done
 String keyboardJson = "" ;
-boolean bSetLapseMode=false;
+
+//boolean bSetLapseMode=false;
+
+enum telegramAnswerCollectionMode {
+  MODE_SET_NONE=0
+  ,MODE_SET_lapseTime=1
+  ,MODE_SET_cvIntervalSec=2
+  ,MODE_SET_cvChangePercent=3
+  //[:ADD INT HERE:]#4
+  //[:ADD STRING HERE:]#4
+} bTeleAnsMode =MODE_SET_NONE ;
 
 ////////////////////////////////////////////////
 String alertTelegram(String msg,boolean messageOnly=false);
@@ -62,7 +75,7 @@ String alertTelegram(String msg,boolean messageOnly){
     #ifdef CAMERA_MODEL_M5STACK_PSRAM
       msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
     #endif
-    Serial.println("AlertMessage:"+msg);
+    ESP_LOGV(TAG_TELE,"AlertMessage:%s",msg);
     if (messageOnly){
       bot.sendMessage(configItems.adminChatIds, msg,"" );
     }else{
@@ -75,23 +88,38 @@ String alertTelegram(String msg,boolean messageOnly){
         String result= sendCapturedImage2Telegram2(configItems.userChatIds,msg);
       }
     }
-    Serial.println(result);
+    ESP_LOGV(TAG_TELE,"%s",result);
     return(result);
 }
 ///////////////////////////////////////////////
 String formulateKeyboardJson(){
 
-  String lkeyboardJson = "[";
-  lkeyboardJson += " [\"/start\", \"/options\"]";
-  lkeyboardJson += ",[\"/sendPhoto\"]";
-  lkeyboardJson += ",[\"/moreSettings\"";
-  lkeyboardJson +=     ",\"/changeRes\"]";
-  lkeyboardJson += ",[\"/setlapse\"";
-  lkeyboardJson +=     ",\"/restartESP\"]";
+  static const char lkeyboardJson[] PROGMEM = R"(
+  [
+    [
+       "/start \uD83D\uDCA1"
+      ,"/options \uD83C\uDF33"
+    ]
+    ,[
+       "/sendPhoto \uD83D\uDCF7"
+      ,"/restartESP \uD83D\uDD50"
+    ]
+    ,[
+      "/moreSettings \u2699"
+     ,"/changeRes \uD83C\uDF3B"
+    ]
+    ,[ 
+       "/setlapse \u23F3"
+      ,"/setcvChangePercent \uFF05"
+      ,"/setcvIntervalSec \u23F0"
+    ]
+  ]
+  )";
+  // [:ADD BOOLEAN HERE:]#7
+  // [:ADD INT HERE:]#7
+  
 
-  lkeyboardJson += "]";
-  Serial.print("formulateKeyboardJson:");
-  Serial.println(lkeyboardJson);
+  ESP_LOGV(TAG_TELE,"formulateKeyboardJson: %s",lkeyboardJson);
   return(lkeyboardJson);
 }
 ///////////////////////////////////////////////
@@ -99,15 +127,13 @@ String formulateKeyboardJson(){
 void smtpCallback(SMTP_Status status)
 {
     /* Print the current status */
-    Serial.println(status.info());
+    ESP_LOGV(TAG_TELE,"SMTP_Status.info: %s", status.info() );
 
     /* Print the sending result */
     if (status.success())
     {
-        Serial.println("----------------");
-        Serial.printf("Message sent success: %d\n", status.completedCount());
-        Serial.printf("Message sent failled: %d\n", status.failedCount());
-        Serial.println("----------------\n");
+        ESP_LOGV(TAG_TELE,"Message sent success: %d", status.completedCount());
+        ESP_LOGV(TAG_TELE,"Message sent failled: %d", status.failedCount());
         struct tm dt;
 
         for (size_t i = 0; i < smtp.sendingResult.size(); i++)
@@ -116,13 +142,13 @@ void smtpCallback(SMTP_Status status)
             SMTP_Result result = smtp.sendingResult.getItem(i);
             //localtime_r(&result.timesstamp, &dt);
 
-            Serial.printf("Message No: %d\n", i + 1);
-            Serial.printf("Status: %s\n", result.completed ? "success" : "failed");
+            ESP_LOGV(TAG_TELE,"Message No: %d", i + 1);
+            ESP_LOGV(TAG_TELE,"Status    : %s", result.completed ? "success" : "failed");
             //Serial.printf("Date/Time: %d/%d/%d %d:%d:%d\n", dt.tm_year + 1900, dt.tm_mon + 1, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
-            Serial.printf("Recipient: %s\n", result.recipients);
-            Serial.printf("Subject: %s\n", result.subject);
+            ESP_LOGV(TAG_TELE,"Recipient : %s", result.recipients);
+            ESP_LOGV(TAG_TELE,"Subject   : %s", result.subject);
         }
-        Serial.println("----------------\n");
+        ESP_LOGV(TAG_TELE,"----------------\n");
     }
 }
 
@@ -139,8 +165,7 @@ String formulateResolutionInlineKeyBoard(){
   }
   maxRes = FRAMESIZE_UXGA;
   */
-  Serial.print("formulateResolutionInlineKeyBoard:maxRes: ");
-  Serial.println (maxRes);
+  ESP_LOGV(TAG_TELE,"formulateResolutionInlineKeyBoard:maxRes: %d",maxRes);
   for (int i=0;i<=maxRes;i++){
     String checkMark="";
     if (configItems.frameSize == i){
@@ -156,8 +181,7 @@ String formulateResolutionInlineKeyBoard(){
     sep=",";
   }
   lkeyboardJson += "]";
-  Serial.print("formulateResolutionInlineKeyBoard:");
-  Serial.println(lkeyboardJson);
+  ESP_LOGV(TAG_TELE,"formulateResolutionInlineKeyBoard: %s",lkeyboardJson);
   return(lkeyboardJson);
 }
 ///////////////////////////////////////////////
@@ -192,6 +216,8 @@ String formulateOptionsInlineKeyBoard(){
   if (psramFound()){
     // for face detection
   }
+
+  // [:ADD BOOLEAN HERE:]#1
 
   keyboardJson += "[{ \"text\" : \"Camera Mirror is:";
   keyboardJson += (configItems.hMirror?"ON\u2705":"OFF\u274C");
@@ -235,27 +261,25 @@ String formulateOptionsInlineKeyBoard(){
 
   keyboardJson += "]";
 
-  Serial.print("formulateOptionsInlineKeyBoard:");
-  Serial.println(keyboardJson);
+  ESP_LOGV(TAG_TELE,"formulateOptionsInlineKeyBoard: %s", keyboardJson);
   return(keyboardJson);
 }
 
 ////////////////////////////////////
 void handleNewMessages(int numNewMessages) {
-  Serial.println("handleNewMessages:BEGIN");
-  Serial.println(String(numNewMessages));
+  ESP_LOGV(TAG_TELE,"handleNewMessages:BEGIN");
+  ESP_LOGV(TAG_TELE,"numNewMessages:%d",numNewMessages);
   boolean bPrintOptions=true;
   for (int i=0; i<numNewMessages; i++) {
     String chat_id = String(bot.messages[i].chat_id);
     uint16_t message_id = bot.messages[i].message_id;
-    Serial.println("ChatID: "+chat_id);
+    ESP_LOGV(TAG_TELE,"ChatID: %s",chat_id);
     if (chat_id.equals(configItems.adminChatIds) || chat_id.equals(configItems.userChatIds)) {
       // If the type is a "callback_query", a inline keyboard button was pressed
-      if (bot.messages[i].type ==  F("callback_query")) {
+      if (bot.messages[i].type ==  "callback_query") {
         String text = bot.messages[i].text;
         bPrintOptions=false;
-        Serial.print("Call back button pressed with text: ");
-        Serial.println(text);
+        ESP_LOGV(TAG_TELE,"Call back button pressed with text: %s",text);
         //////////////////////
         //if resolution change
         if ( bInlineKeyboardResolution ){
@@ -272,7 +296,7 @@ void handleNewMessages(int numNewMessages) {
            message_id
            );
         }
-        if ( bInlineKeyboardExtraOptions ){
+        if ( bInlineKeyboardExtraOptions ){          
           if (text == "/hMirror") {
             configItems.hMirror = !configItems.hMirror;
           }else if (text == "/vFlip") {
@@ -299,6 +323,7 @@ void handleNewMessages(int numNewMessages) {
             configItems.motDetectOn = !configItems.motDetectOn;
           }else if (text == "/webCaptureOn") {
             configItems.webCaptureOn = !configItems.webCaptureOn;
+            // [:ADD BOOLEAN HERE:]#2
           }else if (text == "/OTAOn") {
             if (acConfig.ota==AC_OTA_BUILTIN )
               acConfig.ota=AC_OTA_EXTRA;
@@ -314,25 +339,30 @@ void handleNewMessages(int numNewMessages) {
             );
         }
         //////////////////////
-        Serial.println("saveConfiguration(configItems);");
+        ESP_LOGV(TAG_TELE,"saveConfiguration(configItems);");
         boolean bDirty=saveConfiguration(&configItems);
-        if (bDirty){
-          Serial.println("applyConfigItem(&configItems);");
-          applyConfigItem(&configItems);
-        }
-
+        ESP_LOGV(TAG_TELE,"applyConfigItem(&configItems)#1");
+        applyConfigItem(&configItems);
       } else {
-        String text = bot.messages[i].text;
+        String text = String(bot.messages[i].text);
         String from_name = bot.messages[i].from_name;
         if (from_name == "")
           from_name = "Guest";
-        Serial.println("TEXT:"+text);
-        if (bSetLapseMode) {
-          bSetLapseMode=false;
-          configItems.lapseTime=(int) text.toInt();
-        }
-        if (text == "/sendPhoto") {
-          Serial.println("handleNewMessages/sendPhoto:BEGIN");
+        ESP_LOGV(TAG_TELE,"TEXT: %s",text);
+        //[:ADD INT HERE:]#5
+        //[:ADD STRING HERE:]#5
+        if (bTeleAnsMode==MODE_SET_lapseTime) {
+          bTeleAnsMode=MODE_SET_NONE;
+          configItems.lapseTime=(int) text.toInt(); }
+        if (bTeleAnsMode==MODE_SET_cvChangePercent) {
+          bTeleAnsMode=MODE_SET_NONE;
+          configItems.cvChangePercent=(int) text.toInt(); }
+        if (bTeleAnsMode==MODE_SET_cvIntervalSec) {
+          bTeleAnsMode=MODE_SET_NONE;
+          configItems.cvIntervalSec=(int) text.toInt(); }
+        ////////////////////////////////////////////////////
+        if (text.startsWith("/sendPhoto ") ) {
+          ESP_LOGV(TAG_TELE,"handleNewMessages/sendPhoto:BEGIN");
           if(bot.messages[i].type == "channel_post") {
             bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
           } else {
@@ -341,39 +371,62 @@ void handleNewMessages(int numNewMessages) {
               msg+=", Battery Voltage "+String(bat_get_voltage())+"mv";
             #endif
             String result= sendCapturedImage2Telegram2(chat_id,msg,message_id);
-            Serial.println("result: "+result);
+            ESP_LOGV(TAG_TELE,"result: %s",result);
           }
-          Serial.println("handleNewMessages/sendPhoto:END");
+          ESP_LOGV(TAG_TELE,"handleNewMessages/sendPhoto:END");
           bPrintOptions=false;
-        }else if(text == "/options") {
+        }else if(text.startsWith("/options ")) {
           bPrintOptions=true;
-          bot.sendMessageWithReplyKeyboard(chat_id, "", "Markdown", formulateKeyboardJson(), true);
-        }else if(text == "/changeRes") {
+          if(bot.sendMessageWithReplyKeyboard(chat_id, "", "Markdown", formulateKeyboardJson(), true) )
+            ESP_LOGV(TAG_TELE,"bot.sendMessageWithReplyKeyboard:TRUE");
+          else
+            ESP_LOGV(TAG_TELE,"bot.sendMessageWithReplyKeyboard:FALSE");
+        }else if(text.startsWith("/changeRes ") ){
           bPrintOptions=false;
           bInlineKeyboardExtraOptions=false;
           bInlineKeyboardResolution=true;
           bot.sendMessageWithInlineKeyboard(chat_id, "Select the resolution", "", formulateResolutionInlineKeyBoard());
-        }else if(text == "/setlapse") {
+        }
+        //[:ADD INT HERE:]#6
+        //[:ADD STRING HERE:]#6
+        else if(text.startsWith("/setlapse ") ){
           configItems.lapseTime=0;
           bot.sendMessage(chat_id, "Please insert Lapse Time in minutes:", "");
-          bSetLapseMode=true;
+          bTeleAnsMode=MODE_SET_lapseTime;
           bPrintOptions=false;
-        }else if(text == "/moreSettings") {
+        }
+        else if(text.startsWith( "/setcvChangePercent ") ) {
+          configItems.cvChangePercent=0;
+          bot.sendMessage(chat_id, "Please insert CV change percentage:", "");
+          bTeleAnsMode=MODE_SET_cvChangePercent;
+          bPrintOptions=false;
+        }
+        else if(text.startsWith("/setcvIntervalSec ") ){
+          configItems.cvIntervalSec=0;
+          bot.sendMessage(chat_id, "Please insert time in ms between two CV frames:", "");
+          bTeleAnsMode=MODE_SET_cvIntervalSec;
+          bPrintOptions=false;
+        } else if(text.startsWith("/moreSettings") ){
           configItems.useDeepSleep=false;
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
           bInlineKeyboardExtraOptions=true;
           bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "html", formulateOptionsInlineKeyBoard());
-        }else if(text == "/restartESP") {
+        }else if( text.startsWith("/restartESP") ) {
           numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
           ESP.restart();
-        }else if (text == "/start") {
+        }else if ( text.startsWith("/start ") ){
           String welcome = "```\n";
           welcome += "*Command*    |*Description*\n";
           welcome += "-----|-----\n";
           welcome += "/start       | sends this message\n";
           welcome += "/options     | returns the reply keyboard\n";
           welcome += "/setlapse    | Sets the periodical sending of photo in min (0 is disable)\n";
+          // [:ADD BOOLEAN HERE:]#8
+          // [:ADD INT HERE:]#8
+          welcome += "/setcvChangePercent    | Sets the CV Motion Detect Percent change in number of DarkPixels:\n";
+          welcome += "/setcvIntervalSec    | Sets the CV Motion Detect interval between each 2 consecutive photo capture:\n";
+          
           welcome += "/sendPhoto   | Send a Photo from the camera\n";
           welcome += "/changeRes   | Change the resoltion of the camera\n";
           welcome += "/moreSettings| Access more settings\n";
@@ -387,6 +440,7 @@ void handleNewMessages(int numNewMessages) {
           welcome += "\t useBuzzer    | trigger buzzer on motion detect\n";
           welcome += "\t webCaptureOn | enables and disbales the /capture.jpg url\n";
           welcome += "\t OTAOn        | enables OTA through local Wifi \n";
+          // [:ADD BOOLEAN HERE:]#3
   #if defined(IS_THERE_A_FLASH)
           welcome += "\t useFlash    | Flash is enabled\n";
   #endif
@@ -398,22 +452,20 @@ void handleNewMessages(int numNewMessages) {
           welcome += "\t motDetectOn | Motion detection enabled\n";
   #endif
           welcome += "```";
-          Serial.println(welcome);
+          ESP_LOGV(TAG_TELE,"welcome message:%s",welcome);
           bot.sendMessage(chat_id, welcome, "Markdown");
           ////////////////////////////////////////
           bot.sendMessageWithReplyKeyboard(chat_id, "Choose from one of the options below:", "", formulateKeyboardJson(), true);
         }
       }
       ///////////////////////////////////
-      Serial.println("saveConfiguration(configItems);");
+      ESP_LOGV(TAG_TELE,"saveConfiguration(configItems);");
       boolean bDirty=saveConfiguration(&configItems);
-      if (bDirty){
-        Serial.println("applyConfigItem(&configItems);");
-        applyConfigItem(&configItems);
-      }
+      ESP_LOGV(TAG_TELE,"applyConfigItem(&configItems)#2");
+      applyConfigItem(&configItems);
       if(bPrintOptions){
-        Serial.println("printConfiguration(&configItems);");
-        Serial.println(printConfiguration(&configItems,"","\n","|"));
+        ESP_LOGV(TAG_TELE,"printConfiguration(&configItems);");
+        ESP_LOGV(TAG_TELE,"%s",printConfiguration(&configItems,"","\n","|"));
         bot.sendMessage(chat_id, printConfiguration(&configItems,"","\n","|"), "HTML");
         bPrintOptions=false;
         }
@@ -423,7 +475,7 @@ void handleNewMessages(int numNewMessages) {
       , "");
     }
   }
-  Serial.println("handleNewMessages:END");
+  ESP_LOGV(TAG_TELE,"handleNewMessages:END");
 }
 
 ///////////////////////////////////////////////
@@ -546,8 +598,7 @@ void sendEmailPhoto(camera_fb_t * fb ,String espMessage="Teleview Photo"){
 
   /* Start sending the Email and close the session */
   if (!MailClient.sendMail(&smtp, &message, true))
-    Serial.println("Error sending Email, " + smtp.errorReason());
-
+    ESP_LOGE(TAG_TELE,"Error sending Email: %s " , smtp.errorReason());
 }
 
 ///////////////////////////////////////////////
@@ -560,26 +611,26 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
 
 #if defined(FLASH_LAMP_PIN)
   if (configItems.useFlash){
-    Serial.println("Switching Flash-lamp ON");
+    ESP_LOGV(TAG_TELE,"Switching Flash-lamp ON");
     digitalWrite(FLASH_LAMP_PIN, HIGH);
     delay(250);
-    Serial.println("The Flash-lamp is ON");
+    ESP_LOGV(TAG_TELE,"The Flash-lamp is ON");
   }
 #endif
 
 #if defined(USE_OLED_AS_FLASH)
   if (configItems.useFlash){
-    Serial.println("Switching Flash-OLED ON");
+    ESP_LOGV(TAG_TELE,"Switching Flash-OLED ON");
     display_AllWhite();
     delay(250);
-    Serial.println("Flash-OLED is ON");
+    ESP_LOGV(TAG_TELE,"Flash-OLED is ON");
   }
 #endif
 
-  Serial.println("Capture Photo");
+  ESP_LOGV(TAG_TELE,"Capture Photo");
   fb = esp_camera_fb_get();
   if(!fb) {
-    Serial.println("Camera capture failed");
+    ESP_LOGE(TAG_TELE,"Camera capture failed");
     delay(1000);
     ESP.restart();
   }
@@ -587,28 +638,28 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   if (configItems.useFlash){
     delay(10);
     digitalWrite(FLASH_LAMP_PIN, LOW); 
-    Serial.println("Flash-lamp OFF");
+    ESP_LOGV(TAG_TELE,"Flash-lamp OFF");
   }
 #endif
   int fb_width=fb->width;
   int fb_height=fb->height;
-  Serial.println("sendChatAction#1");
+  ESP_LOGV(TAG_TELE,"sendChatAction#1");
   bot.sendChatAction(chat_id, "upload_photo");
   // reset the client connection
   if (botClient.connected()) {
     #ifdef TELEGRAM_DEBUG
-        Serial.println(F("Closing client"));
+        ESP_LOGV(TAG_TELE,"Closing client");
     #endif
     botClient.stop();
   }
   // Connect with api.telegram.org if not already connected
   if (!botClient.connected()) {
     #ifdef TELEGRAM_DEBUG
-        Serial.println(F("[BOT Client]Connecting to server"));
+        ESP_LOGV(TAG_TELE,"[BOT Client]Connecting to server" );
     #endif
     if (!botClient.connect(TELEGRAM_HOST, TELEGRAM_SSL_PORT)) {
       #ifdef TELEGRAM_DEBUG
-        Serial.println(F("[BOT Client]Conection error"));
+        ESP_LOGE(TAG_TELE,"[BOT Client]Conection error" );
       #endif
     }
   }
@@ -643,7 +694,6 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   uint8_t *fbBuf = fb->buf;
   size_t fbLen = fb->len;
   size_t sentB =0;
-  Serial.println("");
   Serial.print("/");
   for (size_t n=0;n<fbLen;n=n+1024) {
     if (n+1024<fbLen) {
@@ -666,9 +716,11 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   Serial.println("/");
   botClient.print(tail);
 
-  Serial.print ("sendCapturedImage2Telegram2:sentB:");
-  Serial.println (sentB);
-  Serial.println (String(fb_width)+"x"+String(fb_height));
+  ESP_LOGV(TAG_TELE, "sendCapturedImage2Telegram2:sentB:%d , w%d X h%d",
+    sentB,
+    fb_width,
+    fb_height
+    );
 
   int waitTime = 10000;   // timeout 10 seconds
   long startTime = millis();
@@ -677,7 +729,7 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   while ((startTime + waitTime) > millis())
   {
     Serial.print(".");
-    delay(100);
+    //delay(100);
     while (botClient.available())
     {
         char c = botClient.read();
@@ -700,22 +752,21 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
      }
      if (getBody.length()>0) break;
   }
-  Serial.println("");
-  Serial.print("sendCapturedImage2Telegram2:getBody: ");
-  Serial.println(getBody);
-  Serial.println();
+  ESP_LOGV(TAG_TELE,"sendCapturedImage2Telegram2:getBody: %s",getBody);
+  /*
   // Deserialize the JSON document
   // sample:
   // {"ok":false,"error_code":400,"description":"Bad Request: IMAGE_PROCESS_FAILED"}
   // {"ok":true,"result":{"message_id":3914,"from":{"id":1748863501,"is_bot":true,"first_name":"ESP32_CAM_04_bot","username":"ESP32_CAM_04_bot"},"chat":{"id":591479121,"first_name":"A","last_name":"Maklad","username":"asmaklad","type":"private"},"date":1620390975,"photo":[{"file_id":"AgACAgQAAxkDAAIPSmCVND8eYR6M8XHIZykZp_CHHBI-AAKhuDEbWquoUIa2-YNz89PNEjUyLl0AAwEAAwIAA20AAx4iAQABHwQ","file_unique_id":"AQADEjUyLl0AAx4iAQAB","file_size":9221,"width":320,"height":240},{"file_id":"AgACAgQAAxkDAAIPSmCVND8eYR6M8XHIZykZp_CHHBI-AAKhuDEbWquoUIa2-YNz89PNEjUyLl0AAwEAAwIAA3gAAx8iAQABHwQ","file_unique_id":"AQADEjUyLl0AAx8iAQAB","file_size":26810,"width":800,"height":600}],"caption":"800x600, 26810 B"}}
+  */
   if (getBody.equals("")){
     result="Empty Response, Sending Failed.";
   }else{
     DeserializationError error = deserializeJson(doc, getBody);
     // Test if parsing succeeds.
     if (error) {
-      Serial.print(F("sendCapturedImage2Telegram2:deserializeJson() failed: "));
-      Serial.println(error.f_str());
+      ESP_LOGE(TAG_TELE,"sendCapturedImage2Telegram2:deserializeJson() failed: ");
+      ESP_LOGE(TAG_TELE,"%s",error.f_str());
       result="Can't parse response.";
     }
     boolean responseOK=doc["ok"];
@@ -740,14 +791,14 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   // saving to SD card.
 #if defined(SD_CARD_ON)
   if (configItems.saveToSD) {
-    Serial.println("Saving to SD Card.");
+    ESP_LOGV(TAG_TELE,"Saving to SD Card.");
     if(!SD_MMC.begin()){
-      Serial.println("SD Card Mount Failed");
+      ESP_LOGV(TAG_TELE,"SD Card Mount Failed");
       result="SD Card Mount Failed";
     }else{
       uint8_t cardType = SD_MMC.cardType();
       if(cardType == CARD_NONE){
-        Serial.println("No SD Card attached");
+        ESP_LOGV(TAG_TELE,"No SD Card attached");
         result="No SD Card attached";
       }else{
         struct tm *tm;
@@ -761,16 +812,19 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
         // Path where new picture will be saved in SD Card
         String path = "/picture" + String(dateTime) + "_" + messageText+".jpg";
         fs::FS &fs = SD_MMC;
-        Serial.printf("Picture file name: %s\n", path.c_str());
+        ESP_LOGV(TAG_TELE,"Picture file name: %s\n", path.c_str());
         File file = fs.open(path.c_str(), FILE_WRITE);
         if(!file){
-          Serial.println("Failed to open file in writing mode");
+          ESP_LOGV(TAG_TELE,"Failed to open file in writing mode");
         } else {
           file.write(fb->buf, fb->len); // payload (image), payload length
-          Serial.printf("Saved file to path: %s\n", path.c_str());
-          Serial.printf("Card Size: %llu\n",SD_MMC.cardSize());
-          Serial.printf("Total KBytes: %llu\n",SD_MMC.totalBytes()/1024);
-          Serial.printf("Used KBytes: %llu\n",SD_MMC.usedBytes()/1024);
+          ESP_LOGV(TAG_TELE,
+                    "Saved file to path: %s, Card Size: %llu, Total KBytes: %llu, Used KBytes: %llu"
+                    , path.c_str()
+                    , SD_MMC.cardSize()
+                    ,SD_MMC.totalBytes()/1024
+                    ,SD_MMC.usedBytes()/1024
+          );
         }
         file.close();
       }
@@ -779,7 +833,7 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
     if (configItems.useFlash){
       delay(10);
       digitalWrite(FLASH_LAMP_PIN, LOW); 
-      Serial.println("Flash-lamp OFF");
+      ESP_LOGV(TAG_TELE,"Flash-lamp OFF");
     }
 #endif
   }

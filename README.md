@@ -371,4 +371,26 @@ But unfortunately, I couldn't find anything I could use. so I hade to build a si
     * The percentage of change in previous frame pixels and current frame pixels.
 * One important use I could have; is to identify day and night and decide whether asnapshot should be taken or not during using the timelapse features. (not yet implemented)
 
+## capture and streaming
+There are three enpoints for jpeg capture and streaming.
+
+  > It is highly recommended **NOT** to contact the ESP with more than one client at the same time.
+
+### streaming : /streaming
+This will stream in MJPEG as fast as it can. 
+However, it will check for the telegram events every 25 frames which will make it a bit choppy.
+The code will auotmatically stop of the client is closed (once you close the browser tab or move to a another endpoint)
+  > Content-Type: multipart/x-mixed-replace;boundary=...
+
+The CV motion detection will produce alot of false events during the streaming.
+I recomend to deactivate CVMotionDetect feature during streaming.
+
+### Capture as an image : /capture
+will send a jpeg  with the header: ( the picture will be displayed directly in the brwoser )
+  > Content-Disposition:inline; filename=capture.jpg
+
+### Capture as an atatchment jpg file: /capture.jpg
+will send a jpeg  with the header: (as an attachement or downloadable file)
+  > Content-Disposition:attachment; filename=capture.jpg
+
 

@@ -78,6 +78,7 @@ static const char* TAG01 = "SETUP";
 //////////////////////////////////////
 #include "persist.h"
 void applyConfigItem (config_item* ci);
+void handle_telegram(void * param);
 #include "webPages.h"
 #include "motionDetect.h"
 
@@ -205,29 +206,41 @@ void setup() {
   setupFSBrowser();
 #endif
 */
-  ESP_LOGV("SETUP","Configuring the Web Pages!");
+  ESP_LOGV("SETUP","Loading rootpage");
   Portal.host().on("/",rootPage);
+  ESP_LOGV("SETUP","Loading deletePage");
   Portal.host().on("/delete",deletePage);
+  ESP_LOGV("SETUP","Loading capturePage");
   Portal.host().on("/capture",capturePage);
+  ESP_LOGV("SETUP","Loading capturePageJpeg");
   Portal.host().on("/capture.jpg",capturePageJpeg);
+  ESP_LOGV("SETUP","Loading stream_handler");
   Portal.host().on("/stream",stream_handler);
   //Portal.host().on();
   //Portal.append("/capture2","Capture2",capture2Page);
   //Portal.append("/stream","Stream",stream_handler);
   //
+  ESP_LOGV("SETUP","Loading AUX_CONFIGPAGE");  
   auxPageConfig.load(AUX_CONFIGPAGE);
   populateResolutionsSelects(auxPageConfig);
   auxPageConfig.on(onPage);
   //
+  ESP_LOGV("SETUP","Loading AUX_CONAUX_CONFIG_EMAIL_PAGEFIGPAGE");  
+  auxPageConfigEmail.load(AUX_CONFIG_EMAIL_PAGE);
+  auxPageConfigEmail.on(onPageEmail);
+  //
+  ESP_LOGV("SETUP","Loading AUX_CAPTURE");
   auxPageCapture.load(AUX_CAPTURE);
   auxPageCapture.on(onCapture);
   //
+  ESP_LOGV("SETUP","Loading AUX_STREAM");
   auxPageStream.load(AUX_STREAM);
   auxPageStream.on(onStream);
   //
   //
   Portal.join(auxPageCapture);
   Portal.join(auxPageConfig);
+  Portal.join(auxPageConfigEmail);
   Portal.join(auxPageStream);
   ////////////////////////////
   acConfig.apid = configItems.deviceName;
@@ -362,7 +375,7 @@ ESP_LOGV(TAG_MAIN,"SETUP END: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //**********************   The LOOP   ****************************//
 //****************************************************************//
 void loop() {
-  ESP_LOGV(TAG_MAIN,"START LOOP *****************************************************");
+  ESP_LOGV(TAG_MAIN,"START LOOP *********");
   Portal.handleClient();
 
 #if defined(PIR_PIN)
@@ -396,10 +409,8 @@ void loop() {
   line2="                    ";
   line3=WiFi.localIP().toString();
   if (displayEnabled){
-    ESP_LOGV(TAG_MAIN,"displayEnabled:TRUE");
     display_Textlines( line1, line2 , line3 );
   }else{
-    ESP_LOGV(TAG_MAIN,"displayEnabled:FALSE");
     display.clearDisplay();
     display.display();
   }
@@ -414,7 +425,13 @@ void loop() {
       alertTelegram("CV Motion detected");
     }
   }
-  //////////////////////////////////////////////
+  
+  handle_telegram(NULL);
+  ESP_LOGV(TAG_MAIN,"END LOOP **********");
+}
+//****************************************************************//
+void handle_telegram(void * param ){
+//////////////////////////////////////////////
   if (millis() > Bot_lasttime + Bot_mtbs)  {
     ESP_LOGV(TAG_MAIN,"bot.getUpdates() !");    
     int numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
@@ -484,9 +501,8 @@ void loop() {
     /////////////////////////////////////////////
     Bot_lasttime = millis();
   }
-  ESP_LOGV(TAG_MAIN,"END LOOP *****************************************************");
 }
-//****************************************************************//
+
 
 ////////////////////////////////////////////////////////////////////////////
 #ifdef CAMERA_MODEL_M5STACK_PSRAM

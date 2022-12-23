@@ -94,19 +94,31 @@ String alertTelegram(String msg,boolean messageOnly){
 ///////////////////////////////////////////////
 String formulateKeyboardJson(){
 
-  String lkeyboardJson = "[";
-  lkeyboardJson += " [\"/start\", \"/options\"]";
-  lkeyboardJson += ",[\"/sendPhoto\"]";
-  lkeyboardJson += ",[\"/moreSettings\"";
-  lkeyboardJson +=     ",\"/changeRes\"]";
-  lkeyboardJson += ",[\"/setlapse\"";
+  static const char lkeyboardJson[] PROGMEM = R"(
+  [
+    [
+       "/start \uD83D\uDCA1"
+      ,"/options \uD83C\uDF33"
+    ]
+    ,[
+       "/sendPhoto \uD83D\uDCF7"
+      ,"/restartESP \uD83D\uDD50"
+    ]
+    ,[
+      "/moreSettings \u2699"
+     ,"/changeRes \uD83C\uDF3B"
+    ]
+    ,[ 
+       "/setlapse \u23F3"
+      ,"/setcvChangePercent \uFF05"
+      ,"/setcvIntervalSec \u23F0"
+    ]
+  ]
+  )";
   // [:ADD BOOLEAN HERE:]#7
   // [:ADD INT HERE:]#7
-  lkeyboardJson += ",\"/setcvChangePercent\"]";
-  lkeyboardJson += ",[\"/setcvIntervalSec\"";
-  lkeyboardJson +=     ",\"/restartESP\"]";
+  
 
-  lkeyboardJson += "]";
   ESP_LOGV(TAG_TELE,"formulateKeyboardJson: %s",lkeyboardJson);
   return(lkeyboardJson);
 }
@@ -332,7 +344,7 @@ void handleNewMessages(int numNewMessages) {
         ESP_LOGV(TAG_TELE,"applyConfigItem(&configItems)#1");
         applyConfigItem(&configItems);
       } else {
-        String text = bot.messages[i].text;
+        String text = String(bot.messages[i].text);
         String from_name = bot.messages[i].from_name;
         if (from_name == "")
           from_name = "Guest";
@@ -349,7 +361,7 @@ void handleNewMessages(int numNewMessages) {
           bTeleAnsMode=MODE_SET_NONE;
           configItems.cvIntervalSec=(int) text.toInt(); }
         ////////////////////////////////////////////////////
-        if (text == "/sendPhoto") {
+        if (text.startsWith("/sendPhoto ") ) {
           ESP_LOGV(TAG_TELE,"handleNewMessages/sendPhoto:BEGIN");
           if(bot.messages[i].type == "channel_post") {
             bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].chat_title + " " + bot.messages[i].text, "");
@@ -363,10 +375,13 @@ void handleNewMessages(int numNewMessages) {
           }
           ESP_LOGV(TAG_TELE,"handleNewMessages/sendPhoto:END");
           bPrintOptions=false;
-        }else if(text == "/options") {
+        }else if(text.startsWith("/options ")) {
           bPrintOptions=true;
-          bot.sendMessageWithReplyKeyboard(chat_id, "", "Markdown", formulateKeyboardJson(), true);
-        }else if(text == "/changeRes") {
+          if(bot.sendMessageWithReplyKeyboard(chat_id, "", "Markdown", formulateKeyboardJson(), true) )
+            ESP_LOGV(TAG_TELE,"bot.sendMessageWithReplyKeyboard:TRUE");
+          else
+            ESP_LOGV(TAG_TELE,"bot.sendMessageWithReplyKeyboard:FALSE");
+        }else if(text.startsWith("/changeRes ") ){
           bPrintOptions=false;
           bInlineKeyboardExtraOptions=false;
           bInlineKeyboardResolution=true;
@@ -374,33 +389,33 @@ void handleNewMessages(int numNewMessages) {
         }
         //[:ADD INT HERE:]#6
         //[:ADD STRING HERE:]#6
-        else if(text == "/setlapse") {
+        else if(text.startsWith("/setlapse ") ){
           configItems.lapseTime=0;
           bot.sendMessage(chat_id, "Please insert Lapse Time in minutes:", "");
           bTeleAnsMode=MODE_SET_lapseTime;
           bPrintOptions=false;
         }
-        else if(text == "/setcvChangePercent") {
+        else if(text.startsWith( "/setcvChangePercent ") ) {
           configItems.cvChangePercent=0;
           bot.sendMessage(chat_id, "Please insert CV change percentage:", "");
           bTeleAnsMode=MODE_SET_cvChangePercent;
           bPrintOptions=false;
         }
-        else if(text == "/setcvIntervalSec") {
+        else if(text.startsWith("/setcvIntervalSec ") ){
           configItems.cvIntervalSec=0;
           bot.sendMessage(chat_id, "Please insert time in ms between two CV frames:", "");
           bTeleAnsMode=MODE_SET_cvIntervalSec;
           bPrintOptions=false;
-        } else if(text == "/moreSettings") {
+        } else if(text.startsWith("/moreSettings") ){
           configItems.useDeepSleep=false;
           bPrintOptions=false;
           bInlineKeyboardResolution=false;
           bInlineKeyboardExtraOptions=true;
           bot.sendMessageWithInlineKeyboard(chat_id, "Change settings:", "html", formulateOptionsInlineKeyBoard());
-        }else if(text == "/restartESP") {
+        }else if( text.startsWith("/restartESP") ) {
           numNewMessages = bot.getUpdates((bot.last_message_received) + 1);
           ESP.restart();
-        }else if (text == "/start") {
+        }else if ( text.startsWith("/start ") ){
           String welcome = "```\n";
           welcome += "*Command*    |*Description*\n";
           welcome += "-----|-----\n";
@@ -714,7 +729,7 @@ String sendCapturedImage2Telegram2(String chat_id,String messageText ,uint16_t m
   while ((startTime + waitTime) > millis())
   {
     Serial.print(".");
-    delay(100);
+    //delay(100);
     while (botClient.available())
     {
         char c = botClient.read();

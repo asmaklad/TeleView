@@ -119,6 +119,7 @@ struct config_item {
   int lapseTime;
   framesize_t frameSize;
   // [:ADD STRING HERE:]#1
+  String version;
   String sMTPPassword;
   String sMTPUsername;
   String sMTPServer;
@@ -157,6 +158,7 @@ struct config_item {
   .lapseTime=60,  
   .frameSize = FRAMESIZE_CIF,
   // [:ADD STRING HERE:]#2
+  .version="v1.10",
   .sMTPPassword = "",
   .sMTPUsername = "",
   .sMTPServer = "",
@@ -237,6 +239,7 @@ config_item loadConfiguration() {
     ci.adminChatIds=prefs.getString("adminChatIds",configItems.adminChatIds);
     ci.userChatIds=prefs.getString("userChatIds",configItems.userChatIds);
     ci.timeZone=prefs.getString("timeZone",configItems.timeZone);
+    ci.version=prefs.getString("version",configItems.version);
     
     prefs.end();
   }
@@ -278,6 +281,7 @@ boolean saveConfiguration(config_item* ci) {
     prefs.putInt("lapseTime",ci->lapseTime);
     prefs.putUInt("frameSize", (unsigned int) (ci->frameSize) ); 
     // [:ADD STRING HERE:]#5
+    prefs.putString("version",ci->version); 
     prefs.putString("sMTPPassword",ci->sMTPPassword); 
     prefs.putString("sMTPUsername",ci->sMTPUsername); 
     prefs.putString("sMTPServer",ci->sMTPServer);
@@ -310,6 +314,8 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += prefix+" *Attribute*     "+sep+" *Value* "+suffix;
   result += prefix+"Device Name      "+sep+"";
   result += ci->deviceName + suffix;
+  result += prefix+"Version          "+sep+"";
+  result += ci->version + suffix;
   result += prefix+"WIFI SSID        "+sep+"";
   result += WiFi.SSID() + suffix;
   

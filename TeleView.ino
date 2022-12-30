@@ -51,9 +51,9 @@ static const char* TAG_MAIN = "MAIN";
 //#define CAMERA_MODEL_ESP_EYE
 //#define CAMERA_MODEL_M5STACK_PSRAM      // Board definition Boards->ESP32 Arduino->"M5Stack Timer-CAM"
                                           //  Don't use the  Boards->M5Stack Arduino ->"M5Stack Timer CAM"
-//#define CAMERA_MODEL_M5STACK_WIDE
-//#define CAMERA_MODEL_AI_THINKER         // Board definition "AI Thinker ESP32-CAM"
-#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
+//#define CAMERA_MODEL_M5STACK_WIDE         // https://docs.m5stack.com/en/quick_start/timer_cam/arduino
+#define CAMERA_MODEL_AI_THINKER           // Board definition "AI Thinker ESP32-CAM"
+//#define CAMERA_MODEL_TTGO_T1_CAMERA     // Board definition "ESP32 WROVER Module" or "TTGO T1"
                                           // to Have OTA Working:
                                           // tools->Patition Schema-> Minimal SPIFFS(1.9MB with OTA/190KB SPIFFS)
 //#define CAMERA_MODEL_TTGO_T1_CAMERA_162   // Board definition "ESP32 WROVER Module" or "TTGO T1"

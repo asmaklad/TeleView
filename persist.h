@@ -325,6 +325,8 @@ String printConfiguration(config_item* ci,char* prefixC,char* suffixC,char* sep)
   result += ESP.getPsramSize() +suffix;
   result += prefix+"Sketch MD5 "+sep+"";
   result += ESP.getSketchMD5() +suffix;
+  result += prefix+"CAMERA_MODEL     "+sep+"";
+  result += CAMERA_MODEL +suffix;  
   result += prefix+"compileDate      "+sep+"";
   result += compileDate +suffix;
   result += prefix+"compileTime      "+sep+"";

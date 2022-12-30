@@ -223,6 +223,7 @@ String onPage(AutoConnectAux& aux, PageArgument& args) {
     }
   } 
   */ 
+  aux["XCAMERA_MODEL"].as<AutoConnectText>().value= CAMERA_MODEL ;
   #ifndef  I2C_DISPLAY_ADDR
     aux["XscreenOn"].as<AutoConnectCheckbox>().enable=false;
     aux["XscreenFlip"].as<AutoConnectCheckbox>().enable=false;
@@ -427,7 +428,11 @@ static const char AUX_CONFIGPAGE[] PROGMEM = R"({
     },{
         "name": "content",
         "type": "ACText",
-        "value": "</br>Please use this page to configure your Teleview settings"
+        "value": "</br>Please use this page to configure your Teleview settings</br>"
+    },{
+        "name": "XCAMERA_MODEL",
+        "type": "ACText",
+        "value": "<CAMERA_MODEL>"
     },{
         "name": "seperator1",
         "type": "ACElement",
